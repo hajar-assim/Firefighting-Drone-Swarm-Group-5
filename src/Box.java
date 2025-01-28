@@ -7,12 +7,15 @@ public class Box {
     /**
      * Place message in the box for it to be read
      * @param message
-     * @throws InterruptedException
      */
-    public synchronized void put(EventMessage message) throws InterruptedException {
+    public synchronized void put(EventMessage message) {
         // Wait while the box is empty
         while (!boxEmpty) {
-            wait();
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                System.err.println(e);
+            }
         }
         // Put message in the box
         this.message = message;
@@ -27,12 +30,15 @@ public class Box {
     /**
      * Method to get a message from the box
      * @return The message placed in the box
-     * @throws InterruptedException
      */
-    public synchronized EventMessage get() throws InterruptedException {
+    public synchronized EventMessage get() {
         // Wait while box is empty
         while (boxEmpty) {
-            wait();
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                System.err.println(e);
+            }
         }
 
         // Variable to retrieve and return message from the box
