@@ -7,6 +7,7 @@ import java.util.AbstractMap;
  * and coordinates of the affected area.
  */
 public class IncidentEvent {
+    private String receiver;
     private String timestamp;
     private int zoneId;
     private EventType eventType;
@@ -24,13 +25,31 @@ public class IncidentEvent {
      * @param startCoords The start coordinates of the affected area.
      * @param endCoords   The end coordinates of the affected area.
      */
-    public IncidentEvent(String timestamp, int zoneId, String eventType, String severity, String startCoords, String endCoords) {
+    public IncidentEvent(String timestamp, int zoneId, String eventType, String severity, String startCoords, String endCoords, String receiver) {
+        this.receiver = receiver;
         this.timestamp = timestamp;
         this.zoneId = zoneId;
         this.eventType = EventType.fromString(eventType);
         this.severity = Severity.fromString(severity);
         this.startCoordinates = parseCoordinates(startCoords);
         this.endCoordinates = parseCoordinates(endCoords);
+    }
+
+    /**
+     * Retrieves the intended receiver of the message.
+     *
+     * @return The intended receiver of the message.
+     */
+    public String getReceiver() {
+        return receiver;
+    }
+
+    /**
+     * Changes the intended receiver of the message.
+     *
+     */
+    public void setReceiver(String receiver) {
+        this.receiver = receiver;
     }
 
     /**
