@@ -9,20 +9,34 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
-public class FireIncidentSubsystem implements Runnable{
+/**
+ * The FireIncidentSubsystem class is responsible for processing fire incident data.
+ * It reads input files containing fire incident events and zone data, then adds incidents
+ * to the EventQueueManager.
+ */
+public class FireIncidentSubsystem implements Runnable {
     private HashMap<Integer, ArrayList<String>> zones;
     private final String INPUT_FOLDER = "data";
     private File eventFile;
     private File zoneFile;
     private EventQueueManager eventQueueManager;
 
+    /**
+     * Constructs a FireIncidentSubsystem with an EventQueueManager.
+     *
+     * @param eventQueueManager The queue manager responsible for handling events.
+     */
     public FireIncidentSubsystem(EventQueueManager eventQueueManager) {
         this.zones = new HashMap<Integer, ArrayList<String>>();
         this.eventQueueManager = eventQueueManager;
         this.getInputFiles();
     }
 
-    private void getInputFiles(){
+    /**
+     * Retrieves the input files from the specified directory.
+     * Assigns the event and zone files accordingly.
+     */
+    private void getInputFiles() {
         File folder = new File(INPUT_FOLDER);
         File[] files = folder.listFiles();
         if (files == null) {
@@ -39,10 +53,14 @@ public class FireIncidentSubsystem implements Runnable{
         }
     }
 
-    private void parseEvents(){
+    /**
+     * Parses the fire incident event file and adds events to the EventQueueManager.
+     * Each event is associated with a zone, and if zone data is missing, a warning is logged.
+     */
+    private void parseEvents() {
         try (BufferedReader reader = new BufferedReader(new FileReader(this.eventFile))) {
             String line;
-            reader.readLine(); //Skip header line
+            reader.readLine(); // Skip header line
 
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
@@ -61,10 +79,14 @@ public class FireIncidentSubsystem implements Runnable{
         }
     }
 
-    private void parseZones(){
+    /**
+     * Parses the zone file and stores zone data in a hashmap.
+     * Each zone ID is mapped to its corresponding start and end coordinates.
+     */
+    private void parseZones() {
         try (BufferedReader reader = new BufferedReader(new FileReader(this.zoneFile))) {
             String line;
-            reader.readLine(); // skip header line
+            reader.readLine(); // Skip header line
 
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
@@ -77,10 +99,13 @@ public class FireIncidentSubsystem implements Runnable{
         }
     }
 
+    /**
+     * Runs the FireIncidentSubsystem by first parsing the zone data
+     * and then processing the event file to queue incident events.
+     */
     @Override
-    public void run(){
+    public void run() {
         this.parseZones();
         this.parseEvents();
     }
-
 }
