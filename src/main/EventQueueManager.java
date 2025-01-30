@@ -36,9 +36,9 @@ public class EventQueueManager {
      * Method to get a message from the queue
      * @return The message placed in the queue
      */
-    public synchronized IncidentEvent get() {
+    public synchronized IncidentEvent get(String receiver) {
         // Wait while queue is empty
-        while (isEmpty) {
+        while (isEmpty || !message.getReceiver().equals(receiver)) {
             try {
                 wait();
             } catch (InterruptedException e) {

@@ -68,7 +68,7 @@ public class FireIncidentSubsystem implements Runnable {
                 ArrayList<String> zoneCoordinates = zones.get(zoneId);
 
                 if (zoneCoordinates != null) {
-                    IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3], zoneCoordinates.get(0), zoneCoordinates.get(1));
+                    IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3], zoneCoordinates.get(0), zoneCoordinates.get(1), "Scheduler");
                     eventQueueManager.put(incident);
                 } else {
                     System.out.println("Warning: No zone data found for Zone ID " + zoneId);
