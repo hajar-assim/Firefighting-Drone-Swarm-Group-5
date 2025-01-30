@@ -10,17 +10,18 @@ public class Main {
 
         System.out.println("\n === Firefighting Drone System Starting... ===\n");
 
-        // create and start fire incident subsystem thread
+        // create fire incident subsystem thread
         EventQueueManager fireIncidentManager = new EventQueueManager();
         Thread fireIncidentThread = new Thread(new FireIncidentSubsystem(fireIncidentManager));
 
-        // create and start drone subsystem thread
+        // create drone subsystem thread
         EventQueueManager droneManager = new EventQueueManager();
         //Thread droneThread1 = new Thread(new DroneSubsystem(droneManager1));
 
-        // create and start scheduler thread
+        // create scheduler thread
         Thread schedulerThread = new Thread(new Scheduler(fireIncidentManager, droneManager));
 
+        // start threads
         fireIncidentThread.start();
         schedulerThread.start();
         //droneThread.start();
