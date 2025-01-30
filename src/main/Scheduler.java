@@ -6,24 +6,17 @@ import java.util.ArrayList;
 
 public class Scheduler implements Runnable{
     private EventQueueManager fireIncidentManager;
-    private ArrayList<EventQueueManager> droneManagers;
+    private EventQueueManager droneManager;
 
-    public Scheduler(EventQueueManager fireIncidentManager, ArrayList<EventQueueManager> droneManagers){
+    public Scheduler(EventQueueManager fireIncidentManager, EventQueueManager droneManager){
         this.fireIncidentManager = fireIncidentManager;
-        this.droneManagers = droneManagers;
-    }
-
-    private EventQueueManager scheduleDrone(){
-        // Placeholder for while only one drone is being considered
-        return droneManagers.get(0);
+        this.droneManager = droneManager;
     }
 
     public void run(){
         while(true){
             IncidentEvent request = fireIncidentManager.get("Scheduler");
             System.out.println("Received request from Fire Incident Subsystem");
-
-            EventQueueManager droneManager = scheduleDrone();
 
             request.setReceiver("DroneSubsystem");
             droneManager.put(request);

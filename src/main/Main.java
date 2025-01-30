@@ -15,13 +15,11 @@ public class Main {
         Thread fireIncidentThread = new Thread(new FireIncidentSubsystem(fireIncidentManager));
 
         // create and start drone subsystem thread
-        ArrayList<EventQueueManager> droneManagers = new ArrayList<EventQueueManager>();
-        EventQueueManager droneManager1 = new EventQueueManager();
-        droneManagers.add(droneManager1);
+        EventQueueManager droneManager = new EventQueueManager();
         //Thread droneThread1 = new Thread(new DroneSubsystem(droneManager1));
 
         // create and start scheduler thread
-        Thread schedulerThread = new Thread(new Scheduler(fireIncidentManager, droneManagers));
+        Thread schedulerThread = new Thread(new Scheduler(fireIncidentManager, droneManager));
 
         fireIncidentThread.start();
         schedulerThread.start();
