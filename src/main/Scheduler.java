@@ -2,8 +2,6 @@ package main;
 
 import events.IncidentEvent;
 
-import java.util.ArrayList;
-
 public class Scheduler implements Runnable{
     private EventQueueManager fireIncidentManager;
     private EventQueueManager droneManager;
@@ -25,7 +23,7 @@ public class Scheduler implements Runnable{
             IncidentEvent response = droneManager.get("Scheduler");
             System.out.println("Received response from Drone Subsystem");
 
-            request.setReceiver("FireIncidentSubsystem");
+            response.setReceiver("FireIncidentSubsystem");
             fireIncidentManager.put(response);
             System.out.println("Forwarding response to Fire Incident Subsystem");
         }
