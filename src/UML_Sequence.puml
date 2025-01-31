@@ -1,0 +1,28 @@
+@startuml
+autonumber
+
+actor Operator
+participant "FireIncidentSubsystem" as FIS
+participant "EventQueueManager (Fire)" as EQF
+participant "Scheduler" as SCH
+participant "EventQueueManager (Drone)" as EQD
+participant "DroneSubsystem" as DS
+
+Operator -> FIS: Detects fire incident
+FIS -> EQF: Adds incident event
+EQF -> SCH: Sends event request
+
+SCH -> EQD: Forwards request to Drone Subsystem
+EQD -> DS: Sends event request
+DS -> DS: Processes request (Simulates drone dispatch)
+DS -> EQD: Sends response to Scheduler
+
+EQD -> SCH: Sends response
+SCH -> EQF: Notifies FireIncidentSubsystem
+FIS -> Operator: Reports drone dispatched
+
+SCH -> DS: Sends "EVENTS_DONE" signal
+DS -> SCH: Acknowledges shutdown
+DS -> Operator: Logs system shutdown
+
+@enduml
