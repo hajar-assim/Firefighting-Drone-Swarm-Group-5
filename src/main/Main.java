@@ -9,13 +9,14 @@ public class Main {
     public static void main(String[] args) {
 
         System.out.println("\n === Firefighting Drone System Starting... ===\n");
+        String inputFolderPath = "data";
 
         // create fire incident subsystem thread
-        EventQueueManager fireIncidentManager = new EventQueueManager();
-        Thread fireIncidentThread = new Thread(new FireIncidentSubsystem(fireIncidentManager));
+        EventQueueManager fireIncidentManager = new EventQueueManager("Scheduler Queue");
+        Thread fireIncidentThread = new Thread(new FireIncidentSubsystem(fireIncidentManager, inputFolderPath));
 
         // create drone subsystem thread
-        EventQueueManager droneManager = new EventQueueManager();
+        EventQueueManager droneManager = new EventQueueManager("Drone Queue");
         //Thread droneThread1 = new Thread(new DroneSubsystem(droneManager1));
 
         // create scheduler thread

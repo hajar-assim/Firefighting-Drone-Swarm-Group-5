@@ -1,16 +1,21 @@
 package main;
 
+import events.EventType;
 import events.IncidentEvent;
 
 public class EventQueueManager {
-    // Boolean to hold box state
-    private boolean isEmpty = true;
-    // Message to be passed to the queue
+    private boolean isEmpty;
     private IncidentEvent message;
+    private String queueName;
+
+    public EventQueueManager(String queueName){
+        this.queueName = queueName;
+        this.isEmpty = true;
+    }
 
     /**
      * Place message in the queue for it to be read
-     * @param message
+     * @param message the message to be passed (IncidentEvent)
      */
     public synchronized void put(IncidentEvent message) {
         // Wait while the queue is full
@@ -21,14 +26,15 @@ public class EventQueueManager {
                 System.err.println(e);
             }
         }
-        // Put message in the queue
         this.message = message;
-
-        // Queue is not empty anymore so flip bool
         isEmpty = false;
-        System.out.println("Incident added to queue: " + message);
 
-        // Notify other threads that the queue has a message
+        switch (message.getEventType()){
+            case DRONE_DISPATCHED -> {}
+            case EVENTS_DONE -> System.out.println("\n" + this.queueName + ": No more incident events.");
+            default -> System.out.println("\nIncident added to " + this.queueName + ": " + message);
+        }
+
         notifyAll();
     }
 
@@ -37,9 +43,12 @@ public class EventQueueManager {
      * @return The message placed in the queue
      */
     public synchronized IncidentEvent get(String receiver) {
-        // Wait while queue is empty
         while (isEmpty || !message.getReceiver().equals(receiver)) {
             try {
+                // if the message has an EVENTS_DONE event type return it to avoid waiting for no reason
+                if (message != null  && message.getEventType() == EventType.EVENTS_DONE){
+                    return message;
+                }
                 wait();
             } catch (InterruptedException e) {
                 System.err.println(e);
@@ -48,14 +57,8 @@ public class EventQueueManager {
 
         // Variable to retrieve and return message from the queue
         IncidentEvent tmpMsg = message;
-
-        // Set message as null again since this queue no longer has a message
         message = null;
-
-        // Flip boolean to true since queue is now empty
         isEmpty = true;
-
-        // Notify waiting threads that queue is now empty
         notifyAll();
 
         return tmpMsg;

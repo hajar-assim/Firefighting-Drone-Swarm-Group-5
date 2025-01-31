@@ -1,6 +1,8 @@
 package subsystems;
 
+import events.EventType;
 import events.IncidentEvent;
+import events.Severity;
 import main.EventQueueManager;
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,7 +18,7 @@ import java.util.HashMap;
  */
 public class FireIncidentSubsystem implements Runnable {
     private HashMap<Integer, ArrayList<String>> zones;
-    private final String INPUT_FOLDER = "data";
+    private final String INPUT_FOLDER;
     private File eventFile;
     private File zoneFile;
     private EventQueueManager eventQueueManager;
@@ -26,9 +28,10 @@ public class FireIncidentSubsystem implements Runnable {
      *
      * @param eventQueueManager The queue manager responsible for handling events.
      */
-    public FireIncidentSubsystem(EventQueueManager eventQueueManager) {
+    public FireIncidentSubsystem(EventQueueManager eventQueueManager, String inputFolderPath) {
         this.zones = new HashMap<Integer, ArrayList<String>>();
         this.eventQueueManager = eventQueueManager;
+        this.INPUT_FOLDER = inputFolderPath;
         this.getInputFiles();
     }
 
@@ -70,10 +73,15 @@ public class FireIncidentSubsystem implements Runnable {
                 if (zoneCoordinates != null) {
                     IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3], zoneCoordinates.get(0), zoneCoordinates.get(1), "Scheduler");
                     eventQueueManager.put(incident);
+                    IncidentEvent event = eventQueueManager.get("FireIncidentSubsystem");
+                    System.out.println("Fire Incident Subsystem received response from Scheduler: " + event);
                 } else {
                     System.out.println("Warning: No zone data found for Zone ID " + zoneId);
                 }
             }
+
+            IncidentEvent noMoreIncidents = new IncidentEvent("", 0, "EVENTS_DONE", "HIGH", "(0;0)", "(0;0)", "");
+            eventQueueManager.put(noMoreIncidents);
         } catch (Exception e) {
             e.printStackTrace();
         }

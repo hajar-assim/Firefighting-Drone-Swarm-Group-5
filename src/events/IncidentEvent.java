@@ -80,6 +80,14 @@ public class IncidentEvent {
     }
 
     /**
+     * Sets the type of event.
+     * @param event the event we want to set to
+     */
+    public void setEventType(EventType event) {
+        this.eventType = event;
+    }
+
+    /**
      * Retrieves the severity level of the incident.
      *
      * @return The severity level as a Severity enum.
