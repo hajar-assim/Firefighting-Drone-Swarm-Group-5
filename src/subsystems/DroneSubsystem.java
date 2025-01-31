@@ -17,7 +17,7 @@ public class DroneSubsystem implements Runnable {
     public void run(){
         while(true){
             IncidentEvent message = receiveEventManager.get();
-            System.out.println("Drone Subsystem received a message");
+            System.out.println("Drone Subsystem received a message: " + message);
 
             // no more events
             if (message.getEventType() == EventType.EVENTS_DONE){

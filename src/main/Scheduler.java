@@ -17,7 +17,7 @@ public class Scheduler implements Runnable{
     public void run(){
         while(true){
             IncidentEvent message = receiveEventManager.get();
-            System.out.println("Scheduler received a message");
+            System.out.println("Scheduler received a message: " + message);
 
             // no more events
             if (message.getEventType() == EventType.EVENTS_DONE){
