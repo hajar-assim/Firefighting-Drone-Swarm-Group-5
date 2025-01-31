@@ -1,0 +1,86 @@
+@startuml
+
+package events {
+    class Severity {
+        + LOW: Severity
+        + MODERATE: Severity
+        + HIGH: Severity
+        + getWaterFoamAmount(): int
+        + fromString(String): Severity
+    }
+
+    class EventType {
+        + FIRE_DETECTED
+        + DRONE_REQUEST
+        + DRONE_DISPATCHED
+        + EVENTS_DONE
+        + fromString(String): EventType
+    }
+
+    class IncidentEvent {
+        - receiver: String
+        - timestamp: String
+        - zoneId: int
+        - eventType: EventType
+        - severity: Severity
+        - startCoordinates: SimpleEntry<Integer, Integer>
+        - endCoordinates: SimpleEntry<Integer, Integer>
+        + getReceiver(): String
+        + setReceiver(String): void
+        + getTimestamp(): String
+        + getZoneId(): int
+        + getEventType(): EventType
+        + setEventType(EventType): void
+        + getSeverity(): Severity
+        + getStartCoordinates(): SimpleEntry<Integer, Integer>
+        + getEndCoordinates(): SimpleEntry<Integer, Integer>
+        + toString(): String
+    }
+}
+
+package main {
+    class EventQueueManager {
+        - isEmpty: boolean
+        - message: IncidentEvent
+        - queueName: String
+        + put(IncidentEvent): void
+        + get(String): IncidentEvent
+    }
+
+    class Scheduler {
+        - fireIncidentManager: EventQueueManager
+        - droneManager: EventQueueManager
+        + run(): void
+    }
+
+    class Main {
+        + main(String[]): void
+    }
+}
+
+package subsystems {
+    class FireIncidentSubsystem {
+        - zones: HashMap<Integer, ArrayList<String>>
+        - INPUT_FOLDER: String
+        - eventFile: File
+        - zoneFile: File
+        - eventQueueManager: EventQueueManager
+        + run(): void
+    }
+
+    class DroneSubsystem {
+        - droneManager: EventQueueManager
+        + run(): void
+    }
+}
+
+Severity --|> IncidentEvent
+EventType --|> IncidentEvent
+IncidentEvent --> "1" EventQueueManager
+EventQueueManager --> Scheduler
+Scheduler --> "1" DroneSubsystem
+Scheduler --> "1" FireIncidentSubsystem
+FireIncidentSubsystem --> "1" EventQueueManager
+DroneSubsystem --> "1" EventQueueManager
+
+@enduml
