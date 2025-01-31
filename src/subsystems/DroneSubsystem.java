@@ -17,16 +17,20 @@ public class DroneSubsystem implements Runnable {
     public void run(){
         while(true){
             IncidentEvent message = receiveEventManager.get();
-            System.out.println("Drone Subsystem received a message: " + message);
 
-            // no more events
-            if (message.getEventType() == EventType.EVENTS_DONE){
-                System.out.println("Drone Subsystem received EVENTS_DONE message. Stopping thread");
-                break;
+            if (message.getEventType() == EventType.EVENTS_DONE) {
+                System.out.println("\nDrone subsystem received EVENTS_DONE. Shutting down...");
+                return;
             }
 
+            System.out.println("\nDrone subsystem received request: " + message);
+
+            // create response
             message.setReceiver("FireIncident");
-            System.out.println("Responding to Scheduler");
+            message.setEventType(EventType.DRONE_DISPATCHED);
+
+            // Send response back to the scheduler
+            System.out.println("Drone subsystem, sending response to Scheduler");
             sendEventManager.put(message);
         }
     }

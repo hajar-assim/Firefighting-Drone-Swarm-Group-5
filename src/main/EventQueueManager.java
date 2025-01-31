@@ -30,9 +30,8 @@ public class EventQueueManager {
         isEmpty = false;
 
         switch (message.getEventType()){
-            case DRONE_DISPATCHED -> {}
-            case EVENTS_DONE -> System.out.println("\n" + this.queueName + ": No more incident events.");
-            default -> System.out.println("\nIncident added to " + this.queueName + ": " + message);
+            case EVENTS_DONE -> System.out.println(this.queueName + ": No more incident events.");
+            default -> System.out.println("Message added to " + this.queueName + ": " + message);
         }
 
         notifyAll();
@@ -45,10 +44,6 @@ public class EventQueueManager {
     public synchronized IncidentEvent get() {
         while (isEmpty) {
             try {
-                // if the message has an EVENTS_DONE event type return it to avoid waiting for no reason
-                if (message != null  && message.getEventType() == EventType.EVENTS_DONE){
-                    return message;
-                }
                 wait();
             } catch (InterruptedException e) {
                 System.err.println(e);

@@ -17,23 +17,24 @@ public class Scheduler implements Runnable{
     public void run(){
         while(true){
             IncidentEvent message = receiveEventManager.get();
-            System.out.println("Scheduler received a message: " + message);
 
             // no more events
             if (message.getEventType() == EventType.EVENTS_DONE){
+                System.out.println("\nScheduler received EVENTS_DONE message. Forwarding message to drone subsystem and shutting down...");
                 droneManager.put(message);
-                System.out.println("Scheduler received EVENTS_DONE message. Stopping thread");
-                break;
+                return;
             }
 
+            System.out.println("\nScheduler received a message: " + message);
+
             if(message.getReceiver().equals("Drone")){
-                droneManager.put(message);
                 System.out.println("Scheduler forwarding message to Drone Subsystem");
+                droneManager.put(message);
             }
 
             if(message.getReceiver().equals("FireIncident")){
-                fireIncidentManager.put(message);
                 System.out.println("Scheduler forwarding message to Fire Incident Subsystem");
+                fireIncidentManager.put(message);
             }
         }
     }

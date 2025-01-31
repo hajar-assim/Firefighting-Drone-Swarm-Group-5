@@ -74,15 +74,17 @@ public class FireIncidentSubsystem implements Runnable {
 
                 if (zoneCoordinates != null) {
                     IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3], zoneCoordinates.get(0), zoneCoordinates.get(1), "Drone");
+                    System.out.println("\nFire Incident Subsystem detected an incident: " + incident);
                     sendEventManager.put(incident);
                     IncidentEvent event = receiveEventManager.get();
-                    System.out.println("Fire Incident Subsystem received response from Scheduler: " + event);
+                    System.out.println("\nFire Incident Subsystem received response from Scheduler: " + event);
                 } else {
                     System.out.println("Warning: No zone data found for Zone ID " + zoneId);
                 }
             }
 
             IncidentEvent noMoreIncidents = new IncidentEvent("", 0, "EVENTS_DONE", "HIGH", "(0;0)", "(0;0)", "");
+            System.out.println("All events processed. Sending EVENTS_DONE message.");
             sendEventManager.put(noMoreIncidents);
         } catch (Exception e) {
             e.printStackTrace();
