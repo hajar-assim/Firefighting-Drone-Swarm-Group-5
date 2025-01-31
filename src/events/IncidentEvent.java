@@ -35,6 +35,8 @@ public class IncidentEvent {
         this.endCoordinates = parseCoordinates(endCoords);
     }
 
+
+
     /**
      * Retrieves the intended receiver of the message.
      *
