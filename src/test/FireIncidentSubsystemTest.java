@@ -25,14 +25,17 @@ import static org.junit.jupiter.api.Assertions.*;
 class FireIncidentSubsystemTest {
     private FireIncidentSubsystem fireIncidentSubsystem;
     private Thread fireIncidentSubsystemThread;
-    private EventQueueManager eventQueueManager;
+    private EventQueueManager receiveEventManager;
+    private EventQueueManager sendEventManager;
     private Path tempDir;
     private File tempZoneFile;
     private File tempEventFile;
 
     @BeforeEach
     void setUp() throws IOException {
-        eventQueueManager = new EventQueueManager("Test Queue");
+        receiveEventManager = new EventQueueManager("Receiving Queue");
+        sendEventManager = new EventQueueManager("Sending Queue");
+
 
         // create a temporary directory for input files
         tempDir = Files.createTempDirectory("testInputDir");
@@ -60,8 +63,8 @@ class FireIncidentSubsystemTest {
                 StandardOpenOption.CREATE
         );
 
-        fireIncidentSubsystem = new FireIncidentSubsystem(eventQueueManager, tempDir.toString());
-        fireIncidentSubsystemThread = new Thread(new FireIncidentSubsystem(eventQueueManager, tempDir.toString()));
+        fireIncidentSubsystem = new FireIncidentSubsystem(receiveEventManager, sendEventManager, tempDir.toString());
+        fireIncidentSubsystemThread = new Thread(new FireIncidentSubsystem(receiveEventManager, sendEventManager, tempDir.toString()));
     }
 
     @AfterEach
@@ -98,7 +101,7 @@ class FireIncidentSubsystemTest {
         this.fireIncidentSubsystemThread.start();
 
         // make sure event that was added matches our test file
-        IncidentEvent event1 = eventQueueManager.get("Scheduler");
+        IncidentEvent event1 = sendEventManager.get();
         assertNotNull(event1, "Is a valid Event, shouldn't be null");
         assertEquals("14:03:15", event1.getTimestamp());
         assertEquals(1, event1.getZoneId());
@@ -109,10 +112,10 @@ class FireIncidentSubsystemTest {
 
         //simulate scheduler sending back a response so were not busy waiting
         event1.setReceiver("FireIncidentSubsystem");
-        eventQueueManager.put(event1);
+        receiveEventManager.put(event1);
 
         // get the second event and make sure it matches our test event
-        IncidentEvent event2 = eventQueueManager.get("Scheduler");
+        IncidentEvent event2 = sendEventManager.get();
         assertNotNull(event2, "Second event should not be null");
         assertEquals("14:10:00", event2.getTimestamp());
         assertEquals(2, event2.getZoneId());
@@ -123,10 +126,10 @@ class FireIncidentSubsystemTest {
 
         //simulate scheduler sending back a response so were not busy waiting
         event2.setReceiver("FireIncidentSubsystem");
-        eventQueueManager.put(event2);
+        receiveEventManager.put(event2);
 
         //event 3 should not have been sent, instead, end of events file was reached so send EVENTS_DONE event type
-        IncidentEvent endEvent = eventQueueManager.get("Scheduler");
+        IncidentEvent endEvent = sendEventManager.get();
         assertEquals(endEvent.getEventType(), EventType.EVENTS_DONE);
     }
 

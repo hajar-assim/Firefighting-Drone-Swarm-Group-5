@@ -42,8 +42,8 @@ public class EventQueueManager {
      * Method to get a message from the queue
      * @return The message placed in the queue
      */
-    public synchronized IncidentEvent get(String receiver) {
-        while (isEmpty || !message.getReceiver().equals(receiver)) {
+    public synchronized IncidentEvent get() {
+        while (isEmpty) {
             try {
                 // if the message has an EVENTS_DONE event type return it to avoid waiting for no reason
                 if (message != null  && message.getEventType() == EventType.EVENTS_DONE){
