@@ -1,6 +1,6 @@
 package events;
 
-enum Severity {
+public enum Severity {
     LOW(10),
     MODERATE(20),
     HIGH(30);

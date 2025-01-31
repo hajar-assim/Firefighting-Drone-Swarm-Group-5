@@ -1,5 +1,6 @@
 package main;
 
+import events.EventType;
 import events.IncidentEvent;
 
 public class Scheduler implements Runnable{
@@ -14,18 +15,25 @@ public class Scheduler implements Runnable{
     public void run(){
         while(true){
             IncidentEvent request = fireIncidentManager.get("Scheduler");
-            System.out.println("Received request from Fire Incident Subsystem");
+
+            // no more events
+            if (request.getEventType() == EventType.EVENTS_DONE){
+                droneManager.put(request);
+                break;
+            }
+
+            System.out.println("Scheduler received request from Fire Incident Subsystem");
 
             request.setReceiver("DroneSubsystem");
+            System.out.println("Scheduler forwarding request to Drone Subsystem");
             droneManager.put(request);
-            System.out.println("Forwarding request to Drone Subsystem");
 
             IncidentEvent response = droneManager.get("Scheduler");
-            System.out.println("Received response from Drone Subsystem");
+            System.out.println("\nScheduler received response from Drone Subsystem");
 
+            System.out.println("Scheduler forwarding response to Fire Incident Subsystem");
             response.setReceiver("FireIncidentSubsystem");
-            fireIncidentManager.put(response);
-            System.out.println("Forwarding response to Fire Incident Subsystem");
+            fireIncidentManager.put(request);
         }
     }
 }

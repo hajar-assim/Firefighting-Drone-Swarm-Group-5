@@ -2,7 +2,9 @@ package events;
 
 public enum EventType {
     FIRE_DETECTED,
-    DRONE_REQUEST;
+    DRONE_REQUEST,
+    DRONE_DISPATCHED,
+    EVENTS_DONE;
 
     /**
      * Converts a string to an EventType enum, handling case variations.
@@ -14,6 +16,8 @@ public enum EventType {
         return switch (str.trim().toUpperCase()) {
             case "FIRE_DETECTED" -> FIRE_DETECTED;
             case "DRONE_REQUEST" -> DRONE_REQUEST;
+            case "DRONE_DISPATCHED" -> DRONE_DISPATCHED;
+            case "EVENTS_DONE" -> EVENTS_DONE;
             default -> throw new IllegalArgumentException("Invalid Event Type: " + str);
         };
     }
