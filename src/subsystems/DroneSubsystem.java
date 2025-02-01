@@ -5,7 +5,6 @@ import events.IncidentEvent;
 import main.EventQueueManager;
 
 public class DroneSubsystem implements Runnable {
-
     EventQueueManager sendEventManager;
     EventQueueManager receiveEventManager;
 
