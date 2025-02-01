@@ -5,37 +5,32 @@ import events.IncidentEvent;
 import main.EventQueueManager;
 
 public class DroneSubsystem implements Runnable {
-    private EventQueueManager droneManager;
+    EventQueueManager sendEventManager;
+    EventQueueManager receiveEventManager;
 
-    public DroneSubsystem(EventQueueManager droneManager) {
-        this.droneManager = droneManager;
+    public DroneSubsystem(EventQueueManager receiveEventManager, EventQueueManager sendEventManager){
+        this.receiveEventManager = receiveEventManager;
+        this.sendEventManager = sendEventManager;
     }
 
-    public void run() {
-        System.out.println("Drone Subsystem started...");
+    public void run(){
+        while(true){
+            IncidentEvent message = receiveEventManager.get();
 
-        while (true) {
-            IncidentEvent request = droneManager.get("DroneSubsystem");
-
-            if (request.getEventType() == EventType.EVENTS_DONE) {
-                System.out.println("DroneSubsystem received EVENTS_DONE. Shutting down...");
+            if (message.getEventType() == EventType.EVENTS_DONE) {
+                System.out.println("\nDrone subsystem received EVENTS_DONE. Shutting down...");
                 return;
             }
 
-            System.out.println("DroneSubsystem received request: Zone " + request.getZoneId() + ", Severity: " + request.getSeverity());
+            System.out.println("\nDrone subsystem received request: " + message);
 
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                System.out.println("DroneSubsystem interrupted. Exiting...");
-                return;
-            }
-
-            System.out.println("DroneSubsystem completed action for Zone " + request.getZoneId());
+            // create response
+            message.setReceiver("FireIncident");
+            message.setEventType(EventType.DRONE_DISPATCHED);
 
             // Send response back to the scheduler
-            request.setReceiver("Scheduler");
-            droneManager.put(request);
+            System.out.println("Drone subsystem, sending response to Scheduler");
+            sendEventManager.put(message);
         }
     }
 }

@@ -3,34 +3,34 @@ package main;
 import subsystems.FireIncidentSubsystem;
 import subsystems.DroneSubsystem;
 
-import java.util.ArrayList;
-
 public class Main {
     public static void main(String[] args) {
 
         System.out.println("\n === Firefighting Drone System Starting... ===\n");
         String inputFolderPath = "data";
 
+        EventQueueManager schedulerManager = new EventQueueManager("Scheduler Queue");
+        EventQueueManager fireIncidentManager = new EventQueueManager("Fire Incident Queue");
+        EventQueueManager droneManager = new EventQueueManager("Drone Queue");
+
         // create fire incident subsystem thread
-        EventQueueManager fireIncidentManager = new EventQueueManager("Scheduler Queue");
-        Thread fireIncidentThread = new Thread(new FireIncidentSubsystem(fireIncidentManager, inputFolderPath));
+        Thread fireIncidentThread = new Thread(new FireIncidentSubsystem(fireIncidentManager, schedulerManager, inputFolderPath));
 
         // create drone subsystem thread
-        EventQueueManager droneManager = new EventQueueManager("Drone Queue");
-        //Thread droneThread1 = new Thread(new DroneSubsystem(droneManager1));
+        Thread droneThread = new Thread(new DroneSubsystem(droneManager, schedulerManager));
 
         // create scheduler thread
-        Thread schedulerThread = new Thread(new Scheduler(fireIncidentManager, droneManager));
+        Thread schedulerThread = new Thread(new Scheduler(schedulerManager, fireIncidentManager, droneManager));
 
         // start threads
         fireIncidentThread.start();
         schedulerThread.start();
-        //droneThread.start();
+        droneThread.start();
 
         try {
             fireIncidentThread.join();
             schedulerThread.join();
-            //droneThread.join();
+            droneThread.join();
         } catch (InterruptedException e) {
             System.err.println("Main thread interrupted: " + e.getMessage());
             Thread.currentThread().interrupt();

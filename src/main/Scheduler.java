@@ -4,36 +4,38 @@ import events.EventType;
 import events.IncidentEvent;
 
 public class Scheduler implements Runnable{
+    private EventQueueManager receiveEventManager;
     private EventQueueManager fireIncidentManager;
     private EventQueueManager droneManager;
 
-    public Scheduler(EventQueueManager fireIncidentManager, EventQueueManager droneManager){
+    public Scheduler(EventQueueManager receiveEventManager, EventQueueManager fireIncidentManager, EventQueueManager droneManager){
+        this.receiveEventManager = receiveEventManager;
         this.fireIncidentManager = fireIncidentManager;
         this.droneManager = droneManager;
     }
 
     public void run(){
         while(true){
-            IncidentEvent request = fireIncidentManager.get("Scheduler");
+            IncidentEvent message = receiveEventManager.get();
 
             // no more events
-            if (request.getEventType() == EventType.EVENTS_DONE){
-                droneManager.put(request);
-                break;
+            if (message.getEventType() == EventType.EVENTS_DONE){
+                System.out.println("\nScheduler received EVENTS_DONE message. Forwarding message to drone subsystem and shutting down...");
+                droneManager.put(message);
+                return;
             }
 
-            System.out.println("Scheduler received request from Fire Incident Subsystem");
+            System.out.println("\nScheduler received a message: " + message);
 
-            request.setReceiver("DroneSubsystem");
-            System.out.println("Scheduler forwarding request to Drone Subsystem");
-            droneManager.put(request);
+            if(message.getReceiver().equals("Drone")){
+                System.out.println("Scheduler forwarding message to Drone Subsystem");
+                droneManager.put(message);
+            }
 
-            IncidentEvent response = droneManager.get("Scheduler");
-            System.out.println("\nScheduler received response from Drone Subsystem");
-
-            System.out.println("Scheduler forwarding response to Fire Incident Subsystem");
-            response.setReceiver("FireIncidentSubsystem");
-            fireIncidentManager.put(request);
+            if(message.getReceiver().equals("FireIncident")){
+                System.out.println("Scheduler forwarding message to Fire Incident Subsystem");
+                fireIncidentManager.put(message);
+            }
         }
     }
 }

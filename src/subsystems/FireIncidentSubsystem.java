@@ -21,16 +21,18 @@ public class FireIncidentSubsystem implements Runnable {
     private final String INPUT_FOLDER;
     private File eventFile;
     private File zoneFile;
-    private EventQueueManager eventQueueManager;
+    private EventQueueManager receiveEventManager;
+    private EventQueueManager sendEventManager;
 
     /**
      * Constructs a FireIncidentSubsystem with an EventQueueManager.
      *
-     * @param eventQueueManager The queue manager responsible for handling events.
+     * @param receiveEventManager The queue manager responsible for handling received events.
      */
-    public FireIncidentSubsystem(EventQueueManager eventQueueManager, String inputFolderPath) {
+    public FireIncidentSubsystem(EventQueueManager receiveEventManager, EventQueueManager sendEventManager, String inputFolderPath) {
         this.zones = new HashMap<Integer, ArrayList<String>>();
-        this.eventQueueManager = eventQueueManager;
+        this.receiveEventManager = receiveEventManager;
+        this.sendEventManager = sendEventManager;
         this.INPUT_FOLDER = inputFolderPath;
         this.getInputFiles();
     }
@@ -71,17 +73,19 @@ public class FireIncidentSubsystem implements Runnable {
                 ArrayList<String> zoneCoordinates = zones.get(zoneId);
 
                 if (zoneCoordinates != null) {
-                    IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3], zoneCoordinates.get(0), zoneCoordinates.get(1), "Scheduler");
-                    eventQueueManager.put(incident);
-                    IncidentEvent event = eventQueueManager.get("FireIncidentSubsystem");
-                    System.out.println("Fire Incident Subsystem received response from Scheduler: " + event);
+                    IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3], zoneCoordinates.get(0), zoneCoordinates.get(1), "Drone");
+                    System.out.println("\nFire Incident Subsystem detected an incident: " + incident);
+                    sendEventManager.put(incident);
+                    IncidentEvent event = receiveEventManager.get();
+                    System.out.println("\nFire Incident Subsystem received response from Scheduler: " + event);
                 } else {
                     System.out.println("Warning: No zone data found for Zone ID " + zoneId);
                 }
             }
 
             IncidentEvent noMoreIncidents = new IncidentEvent("", 0, "EVENTS_DONE", "HIGH", "(0;0)", "(0;0)", "");
-            eventQueueManager.put(noMoreIncidents);
+            System.out.println("All events processed. Sending EVENTS_DONE message.");
+            sendEventManager.put(noMoreIncidents);
         } catch (Exception e) {
             e.printStackTrace();
         }
