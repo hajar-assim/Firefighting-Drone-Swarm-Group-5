@@ -1,5 +1,14 @@
 package events;
 
+/**
+ * Severity represents the level of severity for a fire incident.
+ *
+ * Each level has an associated amount of water and foam required:
+ * - LOW: 10 units
+ * - MODERATE: 20 units
+ * - HIGH: 30 units
+ */
+
 public enum Severity {
     LOW(10),
     MODERATE(20),

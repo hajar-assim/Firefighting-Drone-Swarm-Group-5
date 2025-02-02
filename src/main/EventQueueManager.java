@@ -6,7 +6,7 @@ import events.IncidentEvent;
 public class EventQueueManager {
     private boolean isEmpty;
     private IncidentEvent message;
-    private String queueName;
+    private final String queueName;
 
     public EventQueueManager(String queueName){
         this.queueName = queueName;
