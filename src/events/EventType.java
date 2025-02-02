@@ -1,5 +1,15 @@
 package events;
 
+/**
+ * EventType represents the different types of events in the fire incident and drone response system.
+ *
+ * Events include:
+ * - FIRE_DETECTED: A fire has been detected.
+ * - DRONE_REQUEST: A request for a drone has been made.
+ * - DRONE_DISPATCHED: A drone has been dispatched.
+ * - EVENTS_DONE: All events for the incident are complete.
+ */
+
 public enum EventType {
     FIRE_DETECTED,
     DRONE_REQUEST,
