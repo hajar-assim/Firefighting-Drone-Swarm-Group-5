@@ -71,25 +71,25 @@ Firefighting-Drone-Swarm-Group-5/
 
 ## Setup Instructions
 
-### Prerequisites
+### 1. Prerequisites
 - **Java Development Kit (JDK)**: Version 11 or higher.
 - **IntelliJ IDEA** (or any preferred IDE).
 - **JUnit 5** for running tests.
 
-### Clone the Repository
+### 2. Clone the Repository
 ```bash
 git clone https://github.com/hajar-assim/Firefighting-Drone-Swarm-Group-5.git
 cd Firefighting-Drone-Swarm-Group-5
 ```
 
-### Open in IntelliJ IDEA
+### 3. Open in IntelliJ IDEA
 1. Launch IntelliJ IDEA.
 2. Click on **Open** and select the `Firefighting-Drone-Swarm-Group-5` directory.
 3. Configure the Project SDK:
   - Navigate to `File > Project Structure > Project`.
   - Set the Project SDK to JDK 11 or higher.
 
-## Running the Program
+### 4. Running the Program
 1. Locate `Main.java` in the `src/main/` directory.
 2. Right-click on `Main.java` and select **Run 'Main'**.
 
