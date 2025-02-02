@@ -25,9 +25,11 @@ public class FireIncidentSubsystem implements Runnable {
     private EventQueueManager sendEventManager;
 
     /**
-     * Constructs a FireIncidentSubsystem with an EventQueueManager.
+     * Constructs a FireIncidentSubsystem.
      *
      * @param receiveEventManager The queue manager responsible for handling received events.
+     * @param sendEventManager The queue manager responsible for sending events.
+     * @param inputFolderPath The path to input folder.
      */
     public FireIncidentSubsystem(EventQueueManager receiveEventManager, EventQueueManager sendEventManager, String inputFolderPath) {
         this.zones = new HashMap<Integer, ArrayList<String>>();

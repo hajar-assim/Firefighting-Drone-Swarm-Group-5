@@ -8,12 +8,22 @@ public class Scheduler implements Runnable{
     private EventQueueManager fireIncidentManager;
     private EventQueueManager droneManager;
 
+    /**
+     * Constructs a FireIncidentSubsystem.
+     *
+     * @param receiveEventManager The queue manager responsible for handling received events.
+     * @param fireIncidentManager The queue manager to forward messages to the fire incident subsystem.
+     * @param droneManager The queue manager to forward messages to the fire incident subsystem.
+     */
     public Scheduler(EventQueueManager receiveEventManager, EventQueueManager fireIncidentManager, EventQueueManager droneManager){
         this.receiveEventManager = receiveEventManager;
         this.fireIncidentManager = fireIncidentManager;
         this.droneManager = droneManager;
     }
 
+    /**
+     * Runs the Scheduler thread. Listens for messages and forwards them to the intended receivers.
+     */
     public void run(){
         while(true){
             IncidentEvent message = receiveEventManager.get();
