@@ -87,11 +87,11 @@ class FireIncidentSubsystemTest {
         HashMap<Integer, ArrayList<String>> zones = (HashMap<Integer, ArrayList<String>>) zonesField.get(fireIncidentSubsystem);
 
         // make sure zone file was parsed correctly
-        assertEquals(zones.size(), 2);
-        assertEquals(zones.get(1).get(0), "(0;0)");
-        assertEquals(zones.get(1).get(1), "(0;600)");
-        assertEquals(zones.get(2).get(0), "(0;600)");
-        assertEquals(zones.get(2).get(1), "(650;1500)");
+        assertEquals(2, zones.size());
+        assertEquals("(0;0)", zones.get(1).get(0));
+        assertEquals("(0;600)", zones.get(1).get(1));
+        assertEquals("(0;600)", zones.get(2).get(0));
+        assertEquals("(650;1500)", zones.get(2).get(1));
     }
 
     @Test
@@ -130,7 +130,7 @@ class FireIncidentSubsystemTest {
 
         //event 3 should not have been sent, instead, end of events file was reached so send EVENTS_DONE event type
         IncidentEvent endEvent = sendEventManager.get();
-        assertEquals(endEvent.getEventType(), EventType.EVENTS_DONE);
+        assertEquals(EventType.EVENTS_DONE, endEvent.getEventType());
     }
 
 }

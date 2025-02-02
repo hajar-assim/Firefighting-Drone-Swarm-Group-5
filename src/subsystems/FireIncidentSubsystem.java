@@ -83,6 +83,12 @@ public class FireIncidentSubsystem implements Runnable {
                 } else {
                     System.out.println("Warning: No zone data found for Zone ID " + zoneId);
                 }
+
+                try{
+                    Thread.sleep(2000);
+                }catch (InterruptedException e){
+                    e.printStackTrace();
+                }
             }
 
             IncidentEvent noMoreIncidents = new IncidentEvent("", 0, "EVENTS_DONE", "HIGH", "(0;0)", "(0;0)", "");
