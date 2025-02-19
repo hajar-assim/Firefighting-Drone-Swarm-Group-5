@@ -26,7 +26,7 @@ public class Scheduler implements Runnable{
      */
     public void run(){
         while(true){
-            IncidentEvent message = receiveEventManager.get();
+            IncidentEvent message = (IncidentEvent) receiveEventManager.get();
 
             // no more events
             if (message.getEventType() == EventType.EVENTS_DONE){
@@ -37,15 +37,15 @@ public class Scheduler implements Runnable{
 
             System.out.println("\nScheduler received a message: " + message);
 
-            if(message.getReceiver().equals("Drone")){
-                System.out.println("Scheduler forwarding message to Drone Subsystem");
-                droneManager.put(message);
-            }
-
-            if(message.getReceiver().equals("FireIncident")){
-                System.out.println("Scheduler forwarding message to Fire Incident Subsystem");
-                fireIncidentManager.put(message);
-            }
+//            if(message.getReceiver().equals("Drone")){
+//                System.out.println("Scheduler forwarding message to Drone Subsystem");
+//                droneManager.put(message);
+//            }
+//
+//            if(message.getReceiver().equals("FireIncident")){
+//                System.out.println("Scheduler forwarding message to Fire Incident Subsystem");
+//                fireIncidentManager.put(message);
+//            }
         }
     }
 }
