@@ -15,7 +15,7 @@ public class EventQueueManagerTest {
         // Create a new EventQueueManager for testing.
         queueManager = new EventQueueManager("Test Queue");
         // Create a sample event.
-        event = new IncidentEvent("24:24:24",10,"FIRE_DETECTED","MODERATE","(24;24)","(1000;1001)","FireIncident");
+        event = new IncidentEvent("24:24:24",10,"FIRE_DETECTED","MODERATE");
     }
 
     @Test
@@ -25,7 +25,7 @@ public class EventQueueManagerTest {
         queueManager.put(event);
 
         // Get event from the queue
-        IncidentEvent retrievedEvent = queueManager.get();
+        IncidentEvent retrievedEvent = (IncidentEvent) queueManager.get();
 
         // Compare both events for equality
         assertEquals(event, retrievedEvent);

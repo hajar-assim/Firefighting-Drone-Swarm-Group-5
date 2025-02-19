@@ -6,6 +6,7 @@ import org.junit.jupiter.api.*;
 import org.opentest4j.AssertionFailedError;
 import subsystems.FireIncidentSubsystem;
 
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -58,7 +59,6 @@ class FireIncidentSubsystemTest {
                 Time,Zone ID,Event type,Severity
                 14:03:15,1,FIRE_DETECTED,High
                 14:10:00,2,DRONE_REQUEST,Moderate
-                14:15:00,3,DRONE_REQUEST,Moderate
                 """).getBytes(),
                 StandardOpenOption.CREATE
         );
@@ -74,25 +74,6 @@ class FireIncidentSubsystemTest {
         Files.deleteIfExists(tempDir);
     }
 
-    @Test
-    @DisplayName("Testing private method parseZones()")
-    void testParseZones() throws Exception {
-        Method parseZonesMethod = FireIncidentSubsystem.class.getDeclaredMethod("parseZones"); // get thee private method parseZones()
-        parseZonesMethod.setAccessible(true); // make it accessible
-        parseZonesMethod.invoke(fireIncidentSubsystem); // call the method
-
-        // get the zones attribute, make it accesible and cast to Hashmap
-        Field zonesField = fireIncidentSubsystem.getClass().getDeclaredField("zones");
-        zonesField.setAccessible(true);
-        HashMap<Integer, ArrayList<String>> zones = (HashMap<Integer, ArrayList<String>>) zonesField.get(fireIncidentSubsystem);
-
-        // make sure zone file was parsed correctly
-        assertEquals(2, zones.size());
-        assertEquals("(0;0)", zones.get(1).get(0));
-        assertEquals("(0;600)", zones.get(1).get(1));
-        assertEquals("(0;600)", zones.get(2).get(0));
-        assertEquals("(650;1500)", zones.get(2).get(1));
-    }
 
     @Test
     @DisplayName("Testing run() method (which tests private method parseEvents())")
@@ -100,36 +81,39 @@ class FireIncidentSubsystemTest {
         // start the thread (calls parseEvents())
         this.fireIncidentSubsystemThread.start();
 
+        ZoneEvent event1 = (ZoneEvent) sendEventManager.get();
+        assertEquals(1, event1.getZoneID());
+        assertEquals(new Point2D.Double(0, 300), event1.getCenter());
+
+        ZoneEvent event2 = (ZoneEvent) sendEventManager.get();
+        assertEquals(2, event2.getZoneID());
+        assertEquals(new Point2D.Double(325, 1050), event2.getCenter());
+
+
         // make sure event that was added matches our test file
-        IncidentEvent event1 = sendEventManager.get();
-        assertNotNull(event1, "Is a valid Event, shouldn't be null");
-        assertEquals("14:03:15", event1.getTimestamp());
-        assertEquals(1, event1.getZoneId());
-        assertEquals(EventType.FIRE_DETECTED, event1.getEventType());
-        assertEquals(Severity.HIGH, event1.getSeverity());
-        assertEquals(new AbstractMap.SimpleEntry<>(0, 0), event1.getStartCoordinates());
-        assertEquals(new AbstractMap.SimpleEntry<>(0, 600), event1.getEndCoordinates());
+        IncidentEvent event3 = (IncidentEvent) sendEventManager.get();
+        assertNotNull(event3, "Is a valid Event, shouldn't be null");
+        assertEquals("14:03:15", event3.getTimeStamp());
+        assertEquals(1, event3.getZoneID());
+        assertEquals(EventType.FIRE_DETECTED, event3.getEventType());
+        assertEquals(Severity.HIGH, event3.getSeverity());
 
         //simulate scheduler sending back a response so were not busy waiting
-        event1.setReceiver("FireIncidentSubsystem");
-        receiveEventManager.put(event1);
+        receiveEventManager.put(event3);
 
         // get the second event and make sure it matches our test event
-        IncidentEvent event2 = sendEventManager.get();
-        assertNotNull(event2, "Second event should not be null");
-        assertEquals("14:10:00", event2.getTimestamp());
-        assertEquals(2, event2.getZoneId());
-        assertEquals(EventType.DRONE_REQUEST, event2.getEventType());
-        assertEquals(Severity.MODERATE, event2.getSeverity());
-        assertEquals(new AbstractMap.SimpleEntry<>(0, 600), event2.getStartCoordinates());
-        assertEquals(new AbstractMap.SimpleEntry<>(650, 1500), event2.getEndCoordinates());
+        IncidentEvent event4 = (IncidentEvent) sendEventManager.get();
+        assertNotNull(event4, "Second event should not be null");
+        assertEquals("14:10:00", event4.getTimeStamp());
+        assertEquals(2, event4.getZoneID());
+        assertEquals(EventType.DRONE_REQUEST, event4.getEventType());
+        assertEquals(Severity.MODERATE, event4.getSeverity());
 
         //simulate scheduler sending back a response so were not busy waiting
-        event2.setReceiver("FireIncidentSubsystem");
-        receiveEventManager.put(event2);
+        receiveEventManager.put(event4);
 
         //event 3 should not have been sent, instead, end of events file was reached so send EVENTS_DONE event type
-        IncidentEvent endEvent = sendEventManager.get();
+        IncidentEvent endEvent = (IncidentEvent) sendEventManager.get();
         assertEquals(EventType.EVENTS_DONE, endEvent.getEventType());
     }
 
