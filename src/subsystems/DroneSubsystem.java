@@ -13,6 +13,8 @@ import main.EventQueueManager;
 public class DroneSubsystem implements Runnable {
     private EventQueueManager sendEventManager;
     private EventQueueManager receiveEventManager;
+    private int droneId;
+    private DroneState droneState;
 
     /**
      * Constructs a DroneSubsystem with the specified event managers.
@@ -23,6 +25,7 @@ public class DroneSubsystem implements Runnable {
     public DroneSubsystem(EventQueueManager receiveEventManager, EventQueueManager sendEventManager) {
         this.receiveEventManager = receiveEventManager;
         this.sendEventManager = sendEventManager;
+        this.droneState = new DroneState(DroneStatus.IDLE, 0, null, 100, 15);
     }
 
     /**
@@ -33,7 +36,7 @@ public class DroneSubsystem implements Runnable {
     @Override
     public void run() {
         while (true) {
-            IncidentEvent message = receiveEventManager.get();
+            IncidentEvent message = (IncidentEvent) receiveEventManager.get();
 
             // Check if it's an "EVENTS_DONE" signal to terminate the subsystem
             if (message.getEventType() == EventType.EVENTS_DONE) {
@@ -44,9 +47,6 @@ public class DroneSubsystem implements Runnable {
             System.out.println("\nDrone subsystem received request: " + message);
 
             // Create response
-            message.setReceiver("FireIncident");
-            message.setEventType(EventType.DRONE_DISPATCHED);
-
             // Send response back to the scheduler
             System.out.println("Drone subsystem, sending response to Scheduler");
             sendEventManager.put(message);
