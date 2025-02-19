@@ -1,11 +1,12 @@
 package main;
 
+import events.Event;
 import events.EventType;
 import events.IncidentEvent;
 
 public class EventQueueManager {
     private boolean isEmpty;
-    private IncidentEvent message;
+    private Event message;
     private final String queueName;
 
     public EventQueueManager(String queueName){
@@ -15,9 +16,9 @@ public class EventQueueManager {
 
     /**
      * Place message in the queue for it to be read
-     * @param message the message to be passed (IncidentEvent)
+     * @param message the message to be passed (Event)
      */
-    public synchronized void put(IncidentEvent message) {
+    public synchronized void put(Event message) {
         // Wait while the queue is full
         while (!isEmpty) {
             try {
@@ -29,9 +30,11 @@ public class EventQueueManager {
         this.message = message;
         isEmpty = false;
 
-        switch (message.getEventType()){
-            case EVENTS_DONE -> System.out.println(this.queueName + ": No more incident events.");
-            default -> System.out.println("Message added to " + this.queueName + ": " + message);
+        if (message instanceof IncidentEvent) {
+            switch (((IncidentEvent) message).getEventType()){
+                case EVENTS_DONE -> System.out.println(this.queueName + ": No more incident events.");
+                default -> System.out.println("Message added to " + this.queueName + ": " + message);
+            }
         }
 
         notifyAll();
@@ -41,7 +44,7 @@ public class EventQueueManager {
      * Method to get a message from the queue
      * @return The message placed in the queue
      */
-    public synchronized IncidentEvent get() {
+    public synchronized Event get() {
         while (isEmpty) {
             try {
                 wait();
@@ -51,7 +54,7 @@ public class EventQueueManager {
         }
 
         // Variable to retrieve and return message from the queue
-        IncidentEvent tmpMsg = message;
+        Event tmpMsg = message;
         message = null;
         isEmpty = true;
         notifyAll();

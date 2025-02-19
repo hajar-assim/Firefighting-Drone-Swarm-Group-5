@@ -28,16 +28,15 @@ class DroneSubsystemTest {
         droneThread = new Thread(droneSubsystem);
         droneThread.start();
 
-        IncidentEvent testEvent = new IncidentEvent("14:05:00", 1, "FIRE_DETECTED", "HIGH", "(0;0)", "(0;600)", "DroneSubsystem");
+        IncidentEvent testEvent = new IncidentEvent("14:05:00", 1, "FIRE_DETECTED", "HIGH");
         receiveQueue.put(testEvent);
 
-        IncidentEvent processedEvent = sendQueue.get();
+        IncidentEvent processedEvent = (IncidentEvent) sendQueue.get();
 
         assertNotNull(processedEvent);
-        assertEquals("FireIncident", processedEvent.getReceiver());
         assertEquals(EventType.DRONE_DISPATCHED, processedEvent.getEventType());
 
-        receiveQueue.put(new IncidentEvent("14:06:00", 0, "EVENTS_DONE", "HIGH", "(0;0)", "(0;0)", "DroneSubsystem"));
+        receiveQueue.put(new IncidentEvent("14:06:00", 0, "EVENTS_DONE", "HIGH"));
         Thread.sleep(500);
         assertFalse(droneThread.isAlive());
     }
@@ -45,7 +44,7 @@ class DroneSubsystemTest {
     @Test
     @DisplayName("Test DroneSubsystem shuts down on EVENTS_DONE")
     void testShutdownOnEventsDone() throws InterruptedException {
-        receiveQueue.put(new IncidentEvent("14:06:00", 0, "EVENTS_DONE", "HIGH", "(0;0)", "(0;0)", "DroneSubsystem"));
+        receiveQueue.put(new IncidentEvent("14:06:00", 0, "EVENTS_DONE", "HIGH"));
 
         droneThread = new Thread(droneSubsystem);
         droneThread.start();
