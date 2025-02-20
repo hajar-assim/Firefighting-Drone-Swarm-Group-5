@@ -69,33 +69,23 @@ public class DroneSubsystem implements Runnable {
     private void dropAgent(DropAgentEvent dropAgentEvent){
         this.droneState.setStatus(DroneStatus.DROPPING_AGENT);
 
-        while (dropAgentEvent.getVolume() > 0) {
-            // Determine how much can be dropped
-            double dropAmount = Math.min(this.droneState.getWaterLevel(), dropAgentEvent.getVolume());
-
-            try{
-                Thread.sleep(NOZZLE_OPEN_TIME * 1000);
-            } catch (InterruptedException e){
-                e.printStackTrace();
-            }
-
-            // Reduce both the drone's water level and the event's remaining volume
-            this.droneState.setWaterLevel((int) (this.droneState.getWaterLevel() - dropAmount));
-            dropAgentEvent.setVolume((int) (dropAgentEvent.getVolume() - dropAmount));
-
-            System.out.println("Dropped " + dropAmount + " liters. Remaining: " + dropAgentEvent.getVolume());
-
-            // If there's still more water needed but the drone is empty, go refill
-            if (dropAgentEvent.getVolume() > 0 && this.droneState.getWaterLevel() == 0) {
-                this.droneRefill();
-            }
+        try{
+            Thread.sleep(NOZZLE_OPEN_TIME * 1000);
+            // Rate of drop = 1L per second
+            Thread.sleep(dropAgentEvent.getVolume() * 1000L);
+        } catch (InterruptedException e){
+            e.printStackTrace();
         }
+        this.droneState.setWaterLevel(this.droneState.getWaterLevel() - dropAgentEvent.getVolume());
+
+        System.out.println("Dropped " + dropAgentEvent.getVolume() + " liters.");
+        this.sendEventManager.put(dropAgentEvent);
+        this.droneRefill();
     }
 
     private void droneRefill(){
         System.out.println("Drone " + this.droneID + " returning to Base (0,0) to refill.");
         this.droneState.setStatus(DroneStatus.REFILLING);
-        Point2D zoneCoords = this.droneState.getCoordinates();
 
         try{
             Thread.sleep(this.timeToZone(this.droneState.getCoordinates(), new Point2D.Double(0,0)) * 1000);
@@ -106,16 +96,7 @@ public class DroneSubsystem implements Runnable {
         this.droneState.setCoordinates(new Point2D.Double(0, 0));
         this.droneState.setWaterLevel(MAX_AGENT);
         System.out.println("Drone " + this.droneID + " refilled to " + this.droneState.getWaterLevel() + " liters.");
-        this.droneState.setStatus(DroneStatus.ON_ROUTE);
-
-        try{
-            Thread.sleep(this.timeToZone(this.droneState.getCoordinates(), zoneCoords) * 1000);
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-
-        this.droneState.setCoordinates(zoneCoords);
-        System.out.println("Drone " + this.droneID + " returned to drop site.");
+        this.droneState.setStatus(DroneStatus.IDLE);
     }
 
 
