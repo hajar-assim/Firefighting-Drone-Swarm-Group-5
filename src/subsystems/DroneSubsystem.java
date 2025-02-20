@@ -16,6 +16,8 @@ public class DroneSubsystem implements Runnable {
     private static final AtomicInteger nextId = new AtomicInteger(1);
     private final int MAX_AGENT = 15;
     private final int NOZZLE_OPEN_TIME = 1;
+    private final double FLIGHT_TIME = 10 * 60; // flight time is 10 mins but use seconds
+    private final Point2D BASE_COORDINATES = new Point2D.Double(0,0);
     private EventQueueManager sendEventManager;
     private EventQueueManager receiveEventManager;
     private final int droneID;
@@ -32,14 +34,13 @@ public class DroneSubsystem implements Runnable {
         this.receiveEventManager = receiveEventManager;
         this.sendEventManager = sendEventManager;
         this.droneID = nextId.getAndIncrement();
-        this.droneState = new DroneState(DroneStatus.IDLE, 0, new Point2D.Double(0,0), 100, MAX_AGENT);
+        this.droneState = new DroneState(DroneStatus.IDLE, 0, BASE_COORDINATES, FLIGHT_TIME, MAX_AGENT);
         this.running = false;
     }
 
-    private long timeToZone(Point2D startCoords, Point2D endCoords){
+    private double timeToZone(Point2D startCoords, Point2D endCoords){
         double distance = startCoords.distance(endCoords);
-
-        return (long) ((distance - 46.875) / 15 + 6.25);
+        return ((distance - 46.875) / 15 + 6.25);
     }
 
     private void dispatchDrone(DroneDispatchEvent droneDispatchEvent){
@@ -49,7 +50,9 @@ public class DroneSubsystem implements Runnable {
         System.out.println("Drone " + this.droneID + " received Dispatch Request to Zone: " + droneDispatchEvent.getZoneID() + " " + droneDispatchEvent.getCoords());
 
         try{
-            Thread.sleep(this.timeToZone(this.droneState.getCoordinates(), droneDispatchEvent.getCoords()) * 1000);
+            double flightTime = this.timeToZone(this.droneState.getCoordinates(), droneDispatchEvent.getCoords());
+            Thread.sleep((long) flightTime * 1000);
+            this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);
         } catch (InterruptedException e){
             e.printStackTrace();
         }
@@ -88,7 +91,9 @@ public class DroneSubsystem implements Runnable {
         this.droneState.setStatus(DroneStatus.REFILLING);
 
         try{
-            Thread.sleep(this.timeToZone(this.droneState.getCoordinates(), new Point2D.Double(0,0)) * 1000);
+            double flightTime = this.timeToZone(this.droneState.getCoordinates(), BASE_COORDINATES);
+            Thread.sleep((long) (flightTime * 1000));
+            this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);
         } catch (InterruptedException e){
             e.printStackTrace();
         }

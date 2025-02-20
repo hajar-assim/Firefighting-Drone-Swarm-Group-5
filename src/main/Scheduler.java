@@ -76,6 +76,14 @@ public class Scheduler implements Runnable {
         System.out.println("No available drones");
     }
 
+    private boolean hasEnoughBattery(DroneState drone, Point2D targetCoords){
+        double distanceToTarget = drone.getCoordinates().distance(targetCoords);
+        double distanceToBase = targetCoords.distance(new Point2D.Double(0,0));
+        double travelTime = (((distanceToTarget + distanceToBase) - 46.875) / 15 + 6.25);
+
+        return (drone.getFlightTime() - travelTime > 30); // use 30 sec limit for now
+    }
+
     /**
      * Handle events when drone arrives at the fire zone
      */
