@@ -52,4 +52,8 @@ public class DroneState {
     public void setWaterLevel(int waterLevel) {
         this.waterLevel = waterLevel;
     }
+
+    public void setZoneID(int zoneID) {
+        this.zoneID = zoneID;
+    }
 }

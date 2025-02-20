@@ -1,51 +1,106 @@
 package main;
 
-import events.EventType;
-import events.IncidentEvent;
+import events.*;
+import subsystems.DroneState;
+import subsystems.DroneStatus;
+import java.awt.geom.Point2D;
+import java.util.ArrayList;
 
-public class Scheduler implements Runnable{
+public class Scheduler implements Runnable {
     private EventQueueManager receiveEventManager;
     private EventQueueManager fireIncidentManager;
     private EventQueueManager droneManager;
+    private EventQueueManager sendEventManager;
+    private ArrayList<DroneState> drones;
+    private volatile boolean running = true;
 
-    /**
-     * Constructs a FireIncidentSubsystem.
-     *
-     * @param receiveEventManager The queue manager responsible for handling received events.
-     * @param fireIncidentManager The queue manager to forward messages to the fire incident subsystem.
-     * @param droneManager The queue manager to forward messages to the fire incident subsystem.
-     */
-    public Scheduler(EventQueueManager receiveEventManager, EventQueueManager fireIncidentManager, EventQueueManager droneManager){
+    public Scheduler(EventQueueManager receiveEventManager, EventQueueManager fireIncidentManager, EventQueueManager droneManager) {
         this.receiveEventManager = receiveEventManager;
         this.fireIncidentManager = fireIncidentManager;
         this.droneManager = droneManager;
+        this.sendEventManager = sendEventManager;
+        this.drones = new ArrayList<>();
+
+        // Init single drone
+        drones.add(new DroneState(DroneStatus.IDLE, 0, new Point2D.Double(0, 0), 100, 15));
     }
 
     /**
-     * Runs the Scheduler thread. Listens for messages and forwards them to the intended receivers.
+     * Main loop that listens for events and processes them.
      */
-    public void run(){
-        while(true){
-            IncidentEvent message = (IncidentEvent) receiveEventManager.get();
+    @Override
+    public void run() {
+        while (running) {
+            try {
+                Event message = receiveEventManager.get();
 
-            // no more events
-            if (message.getEventType() == EventType.EVENTS_DONE){
-                System.out.println("\nScheduler received EVENTS_DONE message. Forwarding message to drone subsystem and shutting down...");
-                droneManager.put(message);
-                return;
+                if (message instanceof IncidentEvent event) {
+                    handleIncidentEvent(event);
+                } else if (message instanceof DroneArrivedEvent arrivedEvent) {
+                    handleDroneArrival(arrivedEvent);
+                } else if (message instanceof DropAgentEvent dropEvent) {
+                    handleDropAgent(dropEvent);
+                }
+            } catch (Exception e) {
+                System.err.println("Scheduler encountered an error: " + e.getMessage());
+                e.printStackTrace();
             }
+        }
+    }
 
-            System.out.println("\nScheduler received a message: " + message);
+    /**
+     * Handles fire incident events -> assigns available drones -> and dispatches them.
+     */
+    private void handleIncidentEvent(IncidentEvent event) {
+        if (event.getEventType() == EventType.EVENTS_DONE) {
+            System.out.println("\nScheduler received EVENTS_DONE.");
+            droneManager.put(event);
+            running = false;
+            return;
+        }
 
-//            if(message.getReceiver().equals("Drone")){
-//                System.out.println("Scheduler forwarding message to Drone Subsystem");
-//                droneManager.put(message);
-//            }
-//
-//            if(message.getReceiver().equals("FireIncident")){
-//                System.out.println("Scheduler forwarding message to Fire Incident Subsystem");
-//                fireIncidentManager.put(message);
-//            }
+        System.out.println("\nScheduler received event: " + event);
+
+        // Find available idle drone
+        DroneState selectedDrone = drones.get(0);
+        if (selectedDrone.getStatus() != DroneStatus.IDLE) {
+            System.out.println("No available drones. Queuing event...");
+            return;
+        }
+
+        // Assign drone and update status
+        selectedDrone.setStatus(DroneStatus.ON_ROUTE);
+        selectedDrone.setCoordinates(new Point2D.Double(12, 40));
+        selectedDrone.setZoneID(event.getZoneID());
+
+        // Dispatch event to DroneSubsystem
+        DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(event.getZoneID(), selectedDrone.getCoordinates());
+        System.out.println("Scheduler dispatching drone to Zone: " + event.getZoneID());
+        droneManager.put(dispatchEvent);
+    }
+
+    /**
+     * Handles events when a drone arrives at its assigned fire zone.
+     */
+    private void handleDroneArrival(DroneArrivedEvent event) {
+        System.out.println("Scheduler: Drone " + event.getDroneID() + " arrived at Zone " + event.getZoneID());
+
+        DroneState drone = drones.get(0);
+        if (drone.getZoneID() == event.getZoneID()) {
+            drone.setStatus(DroneStatus.DROPPING_AGENT);
+        }
+    }
+
+    /**
+     * Handles events when a drone completes dropping the firefighting agent.
+     */
+    private void handleDropAgent(DropAgentEvent event) {
+        System.out.println("Scheduler: Drop finished, returning drone.");
+
+        DroneState drone = drones.get(0);
+        if (drone.getStatus() == DroneStatus.DROPPING_AGENT) {
+            drone.setStatus(DroneStatus.IDLE);
+            drone.setCoordinates(new Point2D.Double(0, 0)); // Return to base
         }
     }
 }
