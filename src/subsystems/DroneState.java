@@ -29,6 +29,10 @@ public class DroneState {
         return zoneID;
     }
 
+    public void setZoneID(int zoneID) {
+        this.zoneID = zoneID;
+    }
+
     public Point2D getCoordinates() {
         return coordinates;
     }
@@ -51,9 +55,5 @@ public class DroneState {
 
     public void setWaterLevel(int waterLevel) {
         this.waterLevel = waterLevel;
-    }
-
-    public void setZoneID(int zoneID) {
-        this.zoneID = zoneID;
     }
 }

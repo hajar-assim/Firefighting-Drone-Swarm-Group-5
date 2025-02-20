@@ -4,7 +4,8 @@ package subsystems;
 public enum DroneStatus {
     IDLE,
     ON_ROUTE,
-    DROPPING_AGENT;
+    DROPPING_AGENT,
+    REFILLING;
 
 
     public static DroneStatus fromString(String str) {
@@ -12,6 +13,7 @@ public enum DroneStatus {
             case "IDLE" -> IDLE;
             case "ON_ROUTE" -> ON_ROUTE;
             case "DROPPING_AGENT" -> DROPPING_AGENT;
+            case "REFILLING" -> REFILLING;
             default -> throw new IllegalArgumentException("Invalid Drone Status Type: " + str);
         };
     }

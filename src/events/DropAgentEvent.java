@@ -12,6 +12,10 @@ public class DropAgentEvent extends Event{
         return volume;
     }
 
+    public void setVolume(int volume) {
+        this.volume = volume;
+    }
+
     @Override
     public String toString() {
         return null;
