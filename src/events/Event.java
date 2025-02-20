@@ -11,5 +11,5 @@ public abstract class Event {
     }
 
     public abstract String toString();
-    public abstract void fromString();
+    public abstract void fromString(String s);
 }

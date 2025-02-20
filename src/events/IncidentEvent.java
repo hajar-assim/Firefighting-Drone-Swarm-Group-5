@@ -1,8 +1,5 @@
 package events;
 
-import java.awt.geom.Point2D;
-import java.util.AbstractMap;
-
 /**
  * Represents an incident event, including details such as timestamp, zone ID, event type, severity,
  * and coordinates of the affected area.
@@ -66,7 +63,7 @@ public class IncidentEvent extends Event{
     }
 
     @Override
-    public void fromString() {
+    public void fromString(String s) {
 
     }
 }
