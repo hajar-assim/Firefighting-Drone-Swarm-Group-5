@@ -100,7 +100,7 @@ public class Scheduler implements Runnable {
         DroneState drone = drones.get(0);
         if (drone.getStatus() == DroneStatus.DROPPING_AGENT) {
             drone.setStatus(DroneStatus.IDLE);
-            drone.setCoordinates(new Point2D.Double(0, 0)); // Return to base
+            drone.setCoordinates(new Point2D.Double(0, 0));
         }
     }
 }
