@@ -46,7 +46,7 @@ public class ZoneEvent extends Event {
     }
 
     @Override
-    public void fromString() {
+    public void fromString(String s) {
 
     }
 }

@@ -6,14 +6,14 @@ public class DroneState {
     private DroneStatus status;
     private int zoneID;
     private Point2D coordinates;
-    private int batteryLevel;
+    private double flightTime;
     private int waterLevel;
 
-    public DroneState(DroneStatus status, int zoneID, Point2D coordinates, int batteryLevel, int waterLevel){
+    public DroneState(DroneStatus status, int zoneID, Point2D coordinates, double flightTime, int waterLevel){
         this.status = status;
         this.zoneID = zoneID;
         this.coordinates = coordinates;
-        this.batteryLevel = batteryLevel;
+        this.flightTime = flightTime;
         this.waterLevel = waterLevel;
     }
 
@@ -29,6 +29,10 @@ public class DroneState {
         return zoneID;
     }
 
+    public void setZoneID(int zoneID) {
+        this.zoneID = zoneID;
+    }
+
     public Point2D getCoordinates() {
         return coordinates;
     }
@@ -37,12 +41,12 @@ public class DroneState {
         this.coordinates = coordinates;
     }
 
-    public int getBatteryLevel() {
-        return batteryLevel;
+    public double getFlightTime() {
+        return flightTime;
     }
 
-    public void setBatteryLevel(int batteryLevel) {
-        this.batteryLevel = batteryLevel;
+    public void setFlightTime(double flightTime) {
+        this.flightTime = flightTime;
     }
 
     public int getWaterLevel() {
@@ -51,9 +55,5 @@ public class DroneState {
 
     public void setWaterLevel(int waterLevel) {
         this.waterLevel = waterLevel;
-    }
-
-    public void setZoneID(int zoneID) {
-        this.zoneID = zoneID;
     }
 }

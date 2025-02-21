@@ -26,7 +26,7 @@ public class DroneUpdateEvent extends Event{
     }
 
     @Override
-    public void fromString() {
+    public void fromString(String s) {
 
     }
 }
