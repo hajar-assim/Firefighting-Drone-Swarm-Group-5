@@ -23,6 +23,7 @@ public class DroneSubsystem implements Runnable {
     private final int droneID;
     private DroneState droneState;
     private volatile boolean running;
+    private EventQueueManager schedulerEventManager;
 
     /**
      * Constructs a DroneSubsystem with the specified event managers.
@@ -34,6 +35,7 @@ public class DroneSubsystem implements Runnable {
         this.receiveEventManager = receiveEventManager;
         this.sendEventManager = sendEventManager;
         this.droneID = nextId.getAndIncrement();
+        this.schedulerEventManager = schedulerEventManager;
         this.droneState = new DroneState(DroneStatus.IDLE, 0, BASE_COORDINATES, FLIGHT_TIME, MAX_AGENT);
         this.running = false;
     }
@@ -102,6 +104,10 @@ public class DroneSubsystem implements Runnable {
         this.droneState.setWaterLevel(MAX_AGENT);
         System.out.println("Drone " + this.droneID + " refilled to " + this.droneState.getWaterLevel() + " liters.");
         this.droneState.setStatus(DroneStatus.IDLE);
+    }
+    private void sendStatusUpdate() {
+        System.out.println("Drone " + droneID + " updating status: " + droneState);
+        schedulerEventManager.put(new IncidentEvent("", droneID, "DRONE_UPDATE", droneState.toString()));
     }
 
 
