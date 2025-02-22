@@ -73,10 +73,10 @@ public class FireIncidentSubsystem implements Runnable {
                 int zoneId = Integer.parseInt(parts[1]);
 
                 IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3]);
-                System.out.println("\nFire Incident Subsystem detected an incident: " + incident);
+                System.out.println("\n[INCIDENT] " + incident);
                 sendEventManager.put(incident);
                 IncidentEvent event = (IncidentEvent) receiveEventManager.get();
-                System.out.println("\nFire Incident Subsystem received response from Scheduler: " + event);
+                System.out.println("\n[INCIDENT] Scheduler Response: " + event);
 
                 try{
                     Thread.sleep(2000);
@@ -86,7 +86,7 @@ public class FireIncidentSubsystem implements Runnable {
             }
 
             IncidentEvent noMoreIncidents = new IncidentEvent("", 0, "EVENTS_DONE", "HIGH");
-            System.out.println("All events processed. Sending EVENTS_DONE message.");
+            System.out.println("[INCIDENT] All events processed. Sending EVENTS_DONE message to terminate.");
             sendEventManager.put(noMoreIncidents);
 
         } catch (Exception e) {

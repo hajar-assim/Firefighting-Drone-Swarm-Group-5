@@ -11,7 +11,7 @@ public class Main {
 
         System.out.println("\n === Firefighting Drone System Starting... ===\n");
         String inputFolderPath = "data";
-        int numDrones = 2;
+        int numDrones = 1;
         Map<Integer, Map.Entry<DroneState, EventQueueManager>> dronesByID = new HashMap<>();
         ArrayList<Thread> droneThreads = new ArrayList<Thread>();
 
