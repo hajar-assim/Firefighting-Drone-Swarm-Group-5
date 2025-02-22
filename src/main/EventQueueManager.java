@@ -32,8 +32,8 @@ public class EventQueueManager {
 
         if (message instanceof IncidentEvent) {
             switch (((IncidentEvent) message).getEventType()){
-                case EVENTS_DONE -> System.out.println(this.queueName + ": No more incident events.");
-                default -> System.out.println("Message added to " + this.queueName + ": " + message);
+                case EVENTS_DONE -> System.out.println("[QUEUE] " + this.queueName + ": No more incident events.");
+                default -> System.out.println("[QUEUE] Message added to " + this.queueName + ": " + message);
             }
         }
 

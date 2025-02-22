@@ -13,18 +13,11 @@ import java.util.Map;
 public class Scheduler implements Runnable {
     private EventQueueManager receiveEventManager;
     private EventQueueManager fireIncidentManager;
-
-    // Stores fire zone coordinates (zoneID, center)
-    private HashMap<Integer, Point2D> fireZones;
-
-    // Tracks required water for each fire incident (zoneID, liters needed)
-    private HashMap<Integer, Integer> fireIncidents;
-
-    // Tracks which drone is assigned to which fire (droneID, zoneID)
-    private HashMap<Integer, Integer> droneAssignments;
-
-    // Stores drones by their unique ID (droneID, DroneState)
-    private Map<Integer, Map.Entry<DroneState, EventQueueManager>> dronesByID;
+    private IncidentEvent unassignedTask = null;
+    private HashMap<Integer, Point2D> fireZones; // Stores fire zone coordinates (zoneID, center)
+    private HashMap<Integer, Integer> fireIncidents; // Tracks required water for each fire incident (zoneID, liters needed)
+    private HashMap<Integer, Integer> droneAssignments; // Tracks which drone is assigned to which fire (droneID, zoneID)
+    private Map<Integer, Map.Entry<DroneState, EventQueueManager>> dronesByID; // Stores drones by their unique ID (droneID, DroneState)
     private volatile boolean running = true;
 
     /**
@@ -54,6 +47,14 @@ public class Scheduler implements Runnable {
     public void run() {
         while (running) {
             try {
+                // attempt to assign task
+                if (unassignedTask != null) {
+                    boolean assigned = attemptAssignUnassignedTask();
+                    if (assigned) {
+                        unassignedTask = null;
+                    }
+                }
+
                 // Retrieve an event from the queue
                 Event message = receiveEventManager.get();
 
@@ -67,6 +68,7 @@ public class Scheduler implements Runnable {
                 } else if (message instanceof DropAgentEvent dropEvent) {
                     handleDropAgent(dropEvent);
                 } else if (message instanceof DroneUpdateEvent updateEvent) {
+                    handleDroneUpdate(updateEvent);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -80,7 +82,7 @@ public class Scheduler implements Runnable {
      */
     private void storeZoneData(ZoneEvent event) {
         fireZones.put(event.getZoneID(), event.getCenter());
-        System.out.println("Stored fire zone: Zone " + event.getZoneID() + ", Center: " + event.getCenter());
+        System.out.println("[SCHEDULER] Stored fire zone: Zone " + event.getZoneID() + ", Center: " + event.getCenter());
     }
 
     /**
@@ -88,10 +90,10 @@ public class Scheduler implements Runnable {
      */
     private void handleIncidentEvent(IncidentEvent event) {
         if (event.getEventType() == EventType.EVENTS_DONE) {
-            System.out.println("\nScheduler received EVENTS_DONE.");
+            System.out.println("\n[SCHEDULER] Received EVENTS_DONE.");
             DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0));
 
-            for(int droneID : this.dronesByID.keySet()) {
+            for (int droneID : this.dronesByID.keySet()) {
                 this.getDroneManager(droneID).put(dispatchToBase);
             }
             running = false;
@@ -99,48 +101,60 @@ public class Scheduler implements Runnable {
         }
 
         if (!fireZones.containsKey(event.getZoneID())) {
-            System.out.println("Error: Fire zone center not found for Zone " + event.getZoneID());
+            System.out.println("[SCHEDULER] Error: Fire zone center not found for Zone " + event.getZoneID());
             return;
         }
 
-        // Determine water requirement based on severity
         int requiredWater = event.getSeverity().getWaterFoamAmount();
-        System.out.println("\nNew fire incident at Zone " + event.getZoneID() + ". Requires " + requiredWater + "L of water.");
-
-        // Add zone id and amount of water required to fireIncidents hashmap
+        System.out.println("\n[SCHEDULER] New fire incident at Zone " + event.getZoneID() + ". Requires " + requiredWater + "L of water.");
         fireIncidents.put(event.getZoneID(), requiredWater);
-        this.assignDrone(event.getZoneID());
 
-        event.setEventType(EventType.DRONE_DISPATCHED);
-        this.fireIncidentManager.put(event);
+        boolean assigned = assignDrone(event.getZoneID());
+
+        if (assigned) {
+            event.setEventType(EventType.DRONE_DISPATCHED);
+            fireIncidentManager.put(event);
+        } else {
+            System.out.println("[SCHEDULER] No drone available. Storing task for later assignment.");
+            unassignedTask = event;
+        }
+    }
+
+    private boolean attemptAssignUnassignedTask() {
+        if (unassignedTask == null) return false;
+
+        int zoneID = unassignedTask.getZoneID();
+        boolean assigned = assignDrone(zoneID);
+
+        if (assigned) {
+            unassignedTask.setEventType(EventType.DRONE_DISPATCHED);
+            fireIncidentManager.put(unassignedTask);
+            return true;
+        }
+        return false;
     }
 
 
     /**
      * Assigns an available drone to a fire zone.
      */
-    private void assignDrone(int zoneID) {
-
+    private boolean assignDrone(int zoneID) {
         Point2D fireZoneCenter = this.fireZones.get(zoneID);
         int droneID = this.findAvailableDrone(fireZoneCenter);
 
-        System.out.println("Scheduler finding an available drone...");
-        while (droneID == -1){
-            try {
-                Thread.sleep(2000);
-            }catch (InterruptedException e){
-                e.printStackTrace();
-            }
-            droneID = this.findAvailableDrone(fireZoneCenter);
+        // no drone available
+        if (droneID == -1) {
+            return false;
         }
 
-        // Send dispatch event to drone
+        // send dispatch event to the drone
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter);
-        System.out.println("Dispatching Drone " + droneID + " to Zone " + zoneID + " at " + fireZoneCenter);
+        System.out.println("[SCHEDULER] Dispatching Drone " + droneID + " to Zone " + zoneID + " at " + fireZoneCenter);
         this.getDroneManager(droneID).put(dispatchEvent);
 
-        // Track assignment of drone to zones
+        // track drone assignment
         droneAssignments.put(droneID, zoneID);
+        return true;
     }
 
     private boolean hasEnoughBattery(DroneState drone, Point2D targetCoords){
@@ -172,7 +186,7 @@ public class Scheduler implements Runnable {
 
         // Ensure drone is assigned to a fire
         if (!droneAssignments.containsKey(droneID)) {
-            System.out.println("Unrecognized Drone Arrived Event.");
+            System.out.println("[SCHEDULER] Unrecognized Drone Arrived Event.");
             return;
         }
 
@@ -180,13 +194,13 @@ public class Scheduler implements Runnable {
 
         // Ensure fire incident exists for the zone
         if (!fireIncidents.containsKey(zoneID)) {
-            System.out.println("Error: Drone " + droneID + " arrived at untracked Zone " + zoneID);
+            System.out.println("[SCHEDULER] Error: Drone " + droneID + " arrived at untracked Zone " + zoneID);
             return;
         }
 
         // Calc how much water to drop
         int waterToDrop = Math.min(fireIncidents.get(zoneID), dronesByID.get(droneID).getKey().getWaterLevel());
-        System.out.println("Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + zoneID);
+        System.out.println("[SCHEDULER] Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + zoneID);
 
         // Send drop event to drone
         DropAgentEvent dropEvent = new DropAgentEvent(waterToDrop);
@@ -203,7 +217,7 @@ public class Scheduler implements Runnable {
         int zoneID = droneAssignments.get(droneID);
 
         if (!fireIncidents.containsKey(zoneID)) {
-            System.out.println("DropAgentEvent received for unknown zone " + zoneID);
+            System.out.println("[SCHEDULER] DropAgentEvent received for unknown zone " + zoneID);
             return;
         }
 
@@ -212,16 +226,31 @@ public class Scheduler implements Runnable {
 
         // If required water vol has been used then remove the incident from the incident list and unassign drone from zone id
         if (remainingWater <= 0) {
-            System.out.println("Fire at Zone " + zoneID + " is now extinguished.");
+            System.out.println("[SCHEDULER] Fire at Zone " + zoneID + " is now extinguished.");
             fireIncidents.remove(zoneID);
             droneAssignments.remove(droneID);
         } else {
             // Otherwise update remaining water and assign another drone to zone
             fireIncidents.put(zoneID, remainingWater);
             droneAssignments.remove(droneID);
-            System.out.println("Fire at Zone " + zoneID + " still needs " + remainingWater + "L of water to extinguish.");
+            System.out.println("[SCHEDULER] Fire at Zone " + zoneID + " still needs " + remainingWater + "L of water to extinguish.");
             assignDrone(zoneID);
         }
     }
+
+    private void handleDroneUpdate(DroneUpdateEvent event) {
+        int droneID = event.getDroneID();
+        DroneStatus status = event.getDroneState().getStatus();
+
+        System.out.println("[SCHEDULER] Received update: Drone " + droneID + " is now " + status);
+
+        if (status == DroneStatus.IDLE) {
+            boolean assigned = attemptAssignUnassignedTask();
+            if (!assigned) {
+                System.out.println("[SCHEDULER] No pending tasks. Drone " + droneID + " remains IDLE.");
+            }
+        }
+    }
+
 
 }

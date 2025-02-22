@@ -68,7 +68,10 @@ public class IncidentEvent extends Event{
      */
     @Override
     public String toString() {
-        return this.getTimeStamp() + " " + this.zoneID + " "  + this.eventType + " " + this.severity;
+        return String.format(
+                "Time: %s | Zone: %d | Type: %s | Severity: %s",
+                this.getTimeStamp(), this.zoneID, this.eventType, this.severity
+        );
     }
 
     @Override

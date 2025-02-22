@@ -55,11 +55,26 @@ public class DroneSubsystem implements Runnable {
         this.droneState.setZoneID(droneDispatchEvent.getZoneID());
         this.droneState.setStatus(DroneStatus.ON_ROUTE);
 
-        System.out.println("Drone " + this.droneID + " received Dispatch Request to Zone: " + droneDispatchEvent.getZoneID() + " " + droneDispatchEvent.getCoords());
+        System.out.println(
+                String.format(
+                        "[DRONE %d] Received dispatch request → Zone: %d | Coordinates: (%.1f, %.1f)",
+                        this.droneID,
+                        droneDispatchEvent.getZoneID(),
+                        droneDispatchEvent.getCoords().getX(),
+                        droneDispatchEvent.getCoords().getY()
+                )
+        );
 
-        try{
+        try {
             double flightTime = this.timeToZone(this.droneState.getCoordinates(), droneDispatchEvent.getCoords());
-            System.out.println("Drone " + this.droneID + " on route to Zone: " + droneDispatchEvent.getZoneID() + ", Estimated time: " + flightTime + "s");
+            System.out.println(
+                    String.format(
+                            "[DRONE %d] On route to Zone: %d | Estimated time: %.2f seconds",
+                            this.droneID,
+                            droneDispatchEvent.getZoneID(),
+                            flightTime
+                    )
+            );
             Thread.sleep((long) flightTime * 1000);
             this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);
         } catch (InterruptedException e){
@@ -68,13 +83,13 @@ public class DroneSubsystem implements Runnable {
 
         this.droneState.setCoordinates(droneDispatchEvent.getCoords());
 
-        if(droneDispatchEvent.getZoneID() == 0){
+        if (droneDispatchEvent.getZoneID() == 0){
             this.running = false;
-            System.out.println("No more events, drone returned to base and shutting down");
+            System.out.println("[DRONE " + this.droneID + "] No more events, drone returned to base and shutting down");
             return;
         }
 
-        System.out.println("Drone " + this.droneID + " arrived to Zone: " + droneDispatchEvent.getZoneID());
+        System.out.println("[DRONE " + this.droneID + "] Arrived to Zone: " + droneDispatchEvent.getZoneID());
         DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(this.droneID, this.droneState.getZoneID());
         this.sendEventManager.put(arrivedEvent);
     }
@@ -83,7 +98,7 @@ public class DroneSubsystem implements Runnable {
         this.droneState.setStatus(DroneStatus.DROPPING_AGENT);
 
         try{
-            System.out.println("Drone " + this.droneID + " opening nozzle and dropping agent.");
+            System.out.println("[DRONE " + this.droneID + "] Opening nozzle and dropping agent.");
             Thread.sleep(NOZZLE_OPEN_TIME * 1000);
             // Rate of drop = 1L per second
             Thread.sleep(dropAgentEvent.getVolume() * 1000L);
@@ -92,17 +107,18 @@ public class DroneSubsystem implements Runnable {
         }
         this.droneState.setWaterLevel(this.droneState.getWaterLevel() - dropAgentEvent.getVolume());
 
-        System.out.println("Dropped " + dropAgentEvent.getVolume() + " liters.");
+        System.out.println("[DRONE " + this.droneID + "] Dropped " + dropAgentEvent.getVolume() + " liters.");
         this.sendEventManager.put(new DropAgentEvent(dropAgentEvent.getVolume(), this.droneID));
         this.droneRefill();
     }
 
     private void droneRefill(){
-        System.out.println("Drone " + this.droneID + " returning to Base (0,0) to refill.");
+        System.out.println("[DRONE " + this.droneID + "] Returning to Base (0,0) to refill.");
         this.droneState.setStatus(DroneStatus.REFILLING);
 
-        try{
+        try {
             double flightTime = this.timeToZone(this.droneState.getCoordinates(), BASE_COORDINATES);
+            System.out.println("[DRONE " + this.droneID + "] Travel time to base: " + String.format("%.2f", flightTime) + "s.");
             Thread.sleep((long) (flightTime * 1000));
             this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);
         } catch (InterruptedException e){
@@ -111,8 +127,12 @@ public class DroneSubsystem implements Runnable {
 
         this.droneState.setCoordinates(new Point2D.Double(0, 0));
         this.droneState.setWaterLevel(MAX_AGENT);
-        System.out.println("Drone " + this.droneID + " refilled to " + this.droneState.getWaterLevel() + " liters.");
+        System.out.println("[DRONE " + this.droneID + "] Refilled to " + this.droneState.getWaterLevel() + " liters.");
         this.droneState.setStatus(DroneStatus.IDLE);
+
+        // notify the scheduler that this drone is operational and ready to go
+        DroneUpdateEvent updateEvent = new DroneUpdateEvent(this.droneID, this.droneState);
+        sendEventManager.put(updateEvent);
     }
 
 
