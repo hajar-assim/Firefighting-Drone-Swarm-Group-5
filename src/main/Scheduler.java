@@ -22,6 +22,10 @@ public class Scheduler implements Runnable {
 
     /**
      * Constructor initializes event managers and HashMaps.
+     *
+     * @param receiveEventManager The event manager for receiving events.
+     * @param fireIncidentManager The event manager for fire incident events.
+     * @param drones A map of drone IDs to their corresponding state and event manager.
      */
     public Scheduler(EventQueueManager receiveEventManager, EventQueueManager fireIncidentManager, Map<Integer, Map.Entry<DroneState, EventQueueManager>> drones) {
         this.receiveEventManager = receiveEventManager;
@@ -32,16 +36,29 @@ public class Scheduler implements Runnable {
         this.dronesByID = drones;
     }
 
+    /**
+     * Gets the event manager for a specific drone.
+     *
+     * @param droneID The unique ID of the drone.
+     * @return The EventQueueManager for the specified drone.
+     */
     private EventQueueManager getDroneManager(int droneID){
         return this.dronesByID.get(droneID).getValue();
     }
 
+    /**
+     * Gets the state of a specific drone.
+     *
+     * @param droneID The unique ID of the drone.
+     * @return The DroneState for the specified drone.
+     */
     private DroneState getDroneState(int droneID){
         return this.dronesByID.get(droneID).getKey();
     }
 
     /**
      * Continuously listens for incoming events and processes them.
+     * It assigns tasks, handles events, and manages drone dispatches.
      */
     @Override
     public void run() {
@@ -77,8 +94,10 @@ public class Scheduler implements Runnable {
     }
 
     /**
-     * Stores fire zone data from ZoneEvent.
+     * Stores fire zone data from a ZoneEvent.
      * Maps the fire zone ID to its center coordinates.
+     *
+     * @param event The ZoneEvent containing fire zone data.
      */
     private void storeZoneData(ZoneEvent event) {
         fireZones.put(event.getZoneID(), event.getCenter());
@@ -87,6 +106,9 @@ public class Scheduler implements Runnable {
 
     /**
      * Handles fire incident events by determining required water and dispatching drones.
+     * If no drone is available, the task is stored for later assignment.
+     *
+     * @param event The IncidentEvent containing fire incident data.
      */
     private void handleIncidentEvent(IncidentEvent event) {
         if (event.getEventType() == EventType.EVENTS_DONE) {
@@ -120,6 +142,11 @@ public class Scheduler implements Runnable {
         }
     }
 
+    /**
+     * Attempts to assign an unassigned task to an available drone.
+     *
+     * @return true if the task is assigned, false otherwise.
+     */
     private boolean attemptAssignUnassignedTask() {
         if (unassignedTask == null) return false;
 
@@ -134,9 +161,11 @@ public class Scheduler implements Runnable {
         return false;
     }
 
-
     /**
      * Assigns an available drone to a fire zone.
+     *
+     * @param zoneID The ID of the fire zone that needs assistance.
+     * @return true if a drone is successfully assigned, false otherwise.
      */
     private boolean assignDrone(int zoneID) {
         Point2D fireZoneCenter = this.fireZones.get(zoneID);
@@ -157,6 +186,13 @@ public class Scheduler implements Runnable {
         return true;
     }
 
+    /**
+     * Checks if the drone has enough battery to complete a round trip to the target coordinates.
+     *
+     * @param drone The drone to check.
+     * @param targetCoords The coordinates of the target zone.
+     * @return true if the drone has enough battery, false otherwise.
+     */
     private boolean hasEnoughBattery(DroneState drone, Point2D targetCoords){
         double distanceToTarget = drone.getCoordinates().distance(targetCoords);
         double distanceToBase = targetCoords.distance(new Point2D.Double(0,0));
@@ -165,6 +201,12 @@ public class Scheduler implements Runnable {
         return (drone.getFlightTime() - travelTime > 30); // use 30 sec limit for now
     }
 
+    /**
+     * Finds an available drone with sufficient battery and water level to complete the task.
+     *
+     * @param fireZoneCenter The coordinates of the fire zone.
+     * @return The ID of the available drone, or -1 if no drone is available.
+     */
     private int findAvailableDrone(Point2D fireZoneCenter){
         // Iterate through all drones and find an available one
         for (int droneID : this.dronesByID.keySet()) {
@@ -179,7 +221,9 @@ public class Scheduler implements Runnable {
     }
 
     /**
-     * Update last known drone when ordering a drop
+     * Handles the event when a drone arrives at a fire zone to drop water.
+     *
+     * @param event The DroneArrivedEvent containing the drone's arrival details.
      */
     private void handleDroneArrival(DroneArrivedEvent event) {
         int droneID = event.getDroneID();
@@ -208,7 +252,9 @@ public class Scheduler implements Runnable {
     }
 
     /**
-     * Handles a DropAgentEvent.
+     * Handles a DropAgentEvent, updating the fire incident data and reassigning drones if necessary.
+     *
+     * @param event The DropAgentEvent containing the details of the water drop.
      */
     private void handleDropAgent(DropAgentEvent event) {
         int droneID = event.getDroneID();
@@ -238,6 +284,11 @@ public class Scheduler implements Runnable {
         }
     }
 
+    /**
+     * Handles a DroneUpdateEvent, updating the drone's status and potentially assigning it a new task.
+     *
+     * @param event The DroneUpdateEvent containing the updated drone details.
+     */
     private void handleDroneUpdate(DroneUpdateEvent event) {
         int droneID = event.getDroneID();
         DroneStatus status = event.getDroneState().getStatus();
@@ -251,6 +302,4 @@ public class Scheduler implements Runnable {
             }
         }
     }
-
-
 }
