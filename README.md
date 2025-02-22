@@ -95,6 +95,45 @@ cd Firefighting-Drone-Swarm-Group-5
 
 ***
 ## Iteration #2
+
+#### **Scheduler Enhancements**
+- Implemented **task prioritization**: ongoing fires are handled before assigning new ones.
+- Improved **fire tracking**: fires are only marked as extinguished once confirmed by the Fire Incident Subsystem.
+- Optimized **logging**: improved clarity and specificness of logs.
+
+#### **Drone Subsystem**
+- Implemented **state machine logic**: drones now transition between predefined states.
+- Improved **flight time calculations**: drones now track time spent traveling, dropping agent, and refilling.
+- Introduced **arrival event notifications**: drones notify the scheduler upon reaching a zone.
+
+#### **New Events Introduced**
+- **`DroneArrivedEvent`**: Notifies the scheduler when a drone reaches a fire zone.
+- **`DroneDispatchEvent`**: Sent when a drone is assigned to a fire.
+- **`DroneUpdateEvent`**: Tracks changes in drone states (e.g., `IDLE → ON_ROUTE`).
+- **`DropAgentEvent`**: Represents a drone performing a water drop.
+
+### **Updated Source Files (`/src`)**
+- **events/**
+  - `DroneArrivedEvent.java`: Sent when a drone reaches its destination.
+  - `DroneDispatchEvent.java`: Represents a drone being assigned to a fire.
+  - `DroneUpdateEvent.java`: Captures drone state changes.
+  - `DropAgentEvent.java`: Handles water drop actions.
+  - `EventType.java`: Defines possible event types.
+  - `IncidentEvent.java`: Represents fire incidents.
+  - `Severity.java`: Enum defining fire severity levels.
+  - `ZoneEvent.java`: Represents fire zones.
+
+- **main/**
+  - `EventQueueManager.java`: Handles message passing between subsystems.
+  - `Main.java`: Entry point for running the system.
+  - `Scheduler.java`: Manages event distribution and drone assignments.
+
+- **subsystems/**
+  - `DroneSubsystem.java`: Implements drone behavior, state transitions, and interactions with the scheduler.
+  - `FireIncidentSubsystem.java`: Reads fire event data and interacts with the scheduler.
+  - `DroneState.java`: Tracks drone properties (status, water level, location).
+  - `DroneStatus.java`: Enum defining drone states (`IDLE`, `ON_ROUTE`, etc.).
+
 ***
 ## Iteration #3
 ***
