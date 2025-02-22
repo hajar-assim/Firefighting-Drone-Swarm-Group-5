@@ -66,10 +66,7 @@ public class Scheduler implements Runnable {
             try {
                 // attempt to assign task
                 if (unassignedTask != null) {
-                    boolean assigned = attemptAssignUnassignedTask();
-                    if (assigned) {
-                        unassignedTask = null;
-                    }
+                    attemptAssignUnassignedTask();
                 }
 
                 // Retrieve an event from the queue
@@ -101,7 +98,11 @@ public class Scheduler implements Runnable {
      */
     private void storeZoneData(ZoneEvent event) {
         fireZones.put(event.getZoneID(), event.getCenter());
-        System.out.println("[SCHEDULER] Stored fire zone: Zone " + event.getZoneID() + ", Center: " + event.getCenter());
+        System.out.printf("[SCHEDULER] Stored fire zone {Zone: %d | Center: (%.1f, %.1f)}%n",
+                event.getZoneID(),
+                event.getCenter().getX(),
+                event.getCenter().getY()
+        );
     }
 
     /**
@@ -111,6 +112,7 @@ public class Scheduler implements Runnable {
      * @param event The IncidentEvent containing fire incident data.
      */
     private void handleIncidentEvent(IncidentEvent event) {
+
         if (event.getEventType() == EventType.EVENTS_DONE) {
             System.out.println("\n[SCHEDULER] Received EVENTS_DONE.");
             DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0));
@@ -150,14 +152,22 @@ public class Scheduler implements Runnable {
     private boolean attemptAssignUnassignedTask() {
         if (unassignedTask == null) return false;
 
-        int zoneID = unassignedTask.getZoneID();
-        boolean assigned = assignDrone(zoneID);
+        // Check if there are any ongoing fires left before assigning waiting tasks
+        for (int zoneID : fireIncidents.keySet()) {
+            if (fireIncidents.get(zoneID) > 0) {
+                return false; // do not assign a new task while active fires exist
+            }
+        }
 
+        boolean assigned = assignDrone(unassignedTask.getZoneID());
         if (assigned) {
+            System.out.println("[SCHEDULER] Assigned drone to waiting fire at Zone " + unassignedTask.getZoneID());
             unassignedTask.setEventType(EventType.DRONE_DISPATCHED);
             fireIncidentManager.put(unassignedTask);
+            unassignedTask = null;
             return true;
         }
+
         return false;
     }
 
@@ -178,7 +188,14 @@ public class Scheduler implements Runnable {
 
         // send dispatch event to the drone
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter);
-        System.out.println("[SCHEDULER] Dispatching Drone " + droneID + " to Zone " + zoneID + " at " + fireZoneCenter);
+        System.out.println(
+                String.format("[SCHEDULER] Dispatching Drone %d to Zone %d | Coordinates: (%.1f, %.1f)",
+                        droneID,
+                        zoneID,
+                        fireZoneCenter.getX(),
+                        fireZoneCenter.getY()
+                )
+        );
         this.getDroneManager(droneID).put(dispatchEvent);
 
         // track drone assignment
@@ -272,9 +289,11 @@ public class Scheduler implements Runnable {
 
         // If required water vol has been used then remove the incident from the incident list and unassign drone from zone id
         if (remainingWater <= 0) {
-            System.out.println("[SCHEDULER] Fire at Zone " + zoneID + " is now extinguished.");
             fireIncidents.remove(zoneID);
             droneAssignments.remove(droneID);
+            // notify FireIncidentSubSystem that the fire has been put out
+            IncidentEvent fireOutEvent = new IncidentEvent("", zoneID, "FIRE_EXTINGUISHED", "NONE");
+            fireIncidentManager.put(fireOutEvent);
         } else {
             // Otherwise update remaining water and assign another drone to zone
             fireIncidents.put(zoneID, remainingWater);
@@ -296,9 +315,33 @@ public class Scheduler implements Runnable {
         System.out.println("\n[SCHEDULER] Received update: Drone " + droneID + " is now " + status);
 
         if (status == DroneStatus.IDLE) {
-            boolean assigned = attemptAssignUnassignedTask();
-            if (!assigned) {
-                System.out.println("[SCHEDULER] No pending tasks. Drone " + droneID + " remains IDLE.");
+            // prevent double assignment
+            if (droneAssignments.containsKey(droneID)) {
+                return;
+            }
+
+            // First, check ongoing fires that still need water
+            for (Map.Entry<Integer, Integer> entry : fireIncidents.entrySet()) {
+                int zoneID = entry.getKey();
+                int remainingWater = entry.getValue();
+
+                if (remainingWater > 0) {
+                    System.out.println("[SCHEDULER] Reassigning Drone " + droneID + " to continue fire suppression at Zone " + zoneID);
+                    assignDrone(zoneID);
+                    return; // stop once a fire has been assigned
+                }
+            }
+
+            // If no ongoing fires, check for waiting fires
+            if (unassignedTask != null) {
+                System.out.println("[SCHEDULER] no active fires, assigning waiting fire at zone " + unassignedTask.getZoneID());
+                boolean assigned = assignDrone(unassignedTask.getZoneID());
+
+                if (assigned) {
+                    unassignedTask.setEventType(EventType.DRONE_DISPATCHED);
+                    fireIncidentManager.put(unassignedTask);
+                    unassignedTask = null;
+                }
             }
         }
     }

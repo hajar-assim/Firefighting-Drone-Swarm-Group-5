@@ -30,6 +30,16 @@ public class EventQueueManager {
         this.message = message;
         isEmpty = false;
 
+<<<<<<< Updated upstream
+=======
+        if (message instanceof IncidentEvent) {
+            switch (((IncidentEvent) message).getEventType()){
+                case EVENTS_DONE -> System.out.println("[QUEUE] " + this.queueName + ": No more incident events.");
+                default -> System.out.println("[QUEUE] Message added to " + this.queueName + ": {" + message + "}");
+            }
+        }
+
+>>>>>>> Stashed changes
         notifyAll();
     }
 

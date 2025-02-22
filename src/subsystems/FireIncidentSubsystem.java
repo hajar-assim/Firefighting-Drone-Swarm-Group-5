@@ -11,6 +11,7 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * The FireIncidentSubsystem class is responsible for processing fire incident data.
@@ -23,6 +24,7 @@ public class FireIncidentSubsystem implements Runnable {
     private File zoneFile;
     private EventQueueManager receiveEventManager;
     private EventQueueManager sendEventManager;
+    private HashSet<Integer> activeFires = new HashSet<>();
 
     /**
      * Constructs a FireIncidentSubsystem.
@@ -73,26 +75,38 @@ public class FireIncidentSubsystem implements Runnable {
                 int zoneId = Integer.parseInt(parts[1]);
 
                 IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3]);
-                System.out.println("\n[INCIDENT] " + incident);
+                System.out.println("\n[FIRE INCIDENT SYSTEM] New incident detected: " + incident);
                 sendEventManager.put(incident);
-                IncidentEvent event = (IncidentEvent) receiveEventManager.get();
-                System.out.println("\n[INCIDENT] Scheduler Response: " + event);
+                activeFires.add(zoneId);
 
-                try{
+                IncidentEvent event = (IncidentEvent) receiveEventManager.get();
+                System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: " + event);
+
+                // If the fire was extinguished before all events were reported, remove it
+                if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
+                    removeFire(event.getZoneID());
+                }
+
+                try {
                     Thread.sleep(2000);
-                }catch (InterruptedException e){
+                } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
 
-            IncidentEvent noMoreIncidents = new IncidentEvent("", 0, "EVENTS_DONE", "HIGH");
-            System.out.println("[INCIDENT] All events processed. Sending EVENTS_DONE message to terminate.");
+            System.out.println("[FIRE INCIDENT SYSTEM] All fires reported, waiting for all fires to be extinguished...");
+            waitForFiresToBeExtinguished();
+
+            // only send EVENTS_DONE once all fires are extinguished
+            IncidentEvent noMoreIncidents = new IncidentEvent("", 0, "EVENTS_DONE", "NONE");
+            System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
             sendEventManager.put(noMoreIncidents);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
 
     /**
      * Parses the zone file and stores zone data in a hashmap.
@@ -111,6 +125,23 @@ public class FireIncidentSubsystem implements Runnable {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void removeFire(int zoneID) {
+        if (activeFires.contains(zoneID)) {
+            activeFires.remove(zoneID);
+            System.out.println("[FIRE INCIDENT SYSTEM] Fire extinguished at Zone " + zoneID);
+        }
+    }
+
+    private void waitForFiresToBeExtinguished() {
+        while (!activeFires.isEmpty()) {
+            IncidentEvent event = (IncidentEvent) receiveEventManager.get();
+
+            if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
+                removeFire(event.getZoneID());
+            }
         }
     }
 

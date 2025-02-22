@@ -70,6 +70,22 @@ public class DroneSubsystem implements Runnable {
         return ((distance - 46.875) / 15 + 6.25);
     }
 
+<<<<<<< Updated upstream
+=======
+    private void dispatchDrone(DroneDispatchEvent droneDispatchEvent){
+        this.droneState.setZoneID(droneDispatchEvent.getZoneID());
+        this.droneState.setStatus(DroneStatus.ON_ROUTE);
+
+        System.out.println(
+                String.format(
+                        "[DRONE %d] Received dispatch request: {Zone: %d | Coordinates: (%.1f, %.1f)}",
+                        this.droneID,
+                        droneDispatchEvent.getZoneID(),
+                        droneDispatchEvent.getCoords().getX(),
+                        droneDispatchEvent.getCoords().getY()
+                )
+        );
+>>>>>>> Stashed changes
 
     /**
      * Simulates the drone traveling to a target zone.
@@ -79,12 +95,23 @@ public class DroneSubsystem implements Runnable {
      */
     private void travelToTarget(int zoneID, Point2D targetCoords){
         try {
+<<<<<<< Updated upstream
             double flightTime = this.timeToZone(this.droneState.getCoordinates(), targetCoords);
             System.out.printf(
                     "[DRONE %d] On route to Zone: %d | Estimated time: %.2f seconds%n",
                     this.droneID,
                     zoneID,
                     flightTime
+=======
+            double flightTime = this.timeToZone(this.droneState.getCoordinates(), droneDispatchEvent.getCoords());
+            System.out.println(
+                    String.format(
+                            "[DRONE %d] On route to {Zone: %d | Estimated time: %.2f seconds}",
+                            this.droneID,
+                            droneDispatchEvent.getZoneID(),
+                            flightTime
+                    )
+>>>>>>> Stashed changes
             );
             Thread.sleep((long) flightTime * 1000);
             this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);

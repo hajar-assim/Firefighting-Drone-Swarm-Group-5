@@ -10,6 +10,7 @@ package events;
  */
 
 public enum Severity {
+    NONE(0),
     LOW(10),
     MODERATE(20),
     HIGH(30);
@@ -35,6 +36,7 @@ public enum Severity {
             throw new IllegalArgumentException("Severity level cannot be null");
         }
         return switch (str.trim().toUpperCase()) {
+            case "NONE" -> NONE;
             case "LOW" -> LOW;
             case "MODERATE" -> MODERATE;
             case "HIGH" -> HIGH;

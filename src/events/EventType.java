@@ -14,6 +14,7 @@ public enum EventType {
     FIRE_DETECTED,
     DRONE_REQUEST,
     DRONE_DISPATCHED,
+    FIRE_EXTINGUISHED,
     EVENTS_DONE;
 
     /**
@@ -27,6 +28,7 @@ public enum EventType {
             case "FIRE_DETECTED" -> FIRE_DETECTED;
             case "DRONE_REQUEST" -> DRONE_REQUEST;
             case "DRONE_DISPATCHED" -> DRONE_DISPATCHED;
+            case "FIRE_EXTINGUISHED" -> FIRE_EXTINGUISHED;
             case "EVENTS_DONE" -> EVENTS_DONE;
             default -> throw new IllegalArgumentException("Invalid Event Type: " + str);
         };

@@ -68,11 +68,19 @@ public class IncidentEvent extends Event{
      */
     @Override
     public String toString() {
-        return String.format(
-                "Time: %s | Zone: %d | Type: %s | Severity: %s",
-                this.getTimeStamp(), this.zoneID, this.eventType, this.severity
-        );
+        if ("fire_extinguished".equals(this.eventType)) {
+            return String.format(
+                    "Zone: %d | Type: %s | Severity: %s",
+                    this.zoneID, this.eventType, this.severity
+            );
+        } else {
+            return String.format(
+                    "Time: %s | Zone: %d | Type: %s | Severity: %s",
+                    this.getTimeStamp(), this.zoneID, this.eventType, this.severity
+            );
+        }
     }
+
 
     @Override
     public void fromString(String s) {
