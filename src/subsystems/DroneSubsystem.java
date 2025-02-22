@@ -37,7 +37,6 @@ public class DroneSubsystem implements Runnable {
         this.running = false;
     }
 
-
     /**
      * Returns the unique ID of the drone.
      *
@@ -47,7 +46,6 @@ public class DroneSubsystem implements Runnable {
         return droneID;
     }
 
-
     /**
      * Returns the current state of the drone.
      *
@@ -56,7 +54,6 @@ public class DroneSubsystem implements Runnable {
     public DroneState getDroneState() {
         return droneState;
     }
-
 
     /**
      * Calculates the estimated flight time required to travel between two coordinates.
@@ -70,57 +67,6 @@ public class DroneSubsystem implements Runnable {
         return ((distance - 46.875) / 15 + 6.25);
     }
 
-<<<<<<< Updated upstream
-=======
-    private void dispatchDrone(DroneDispatchEvent droneDispatchEvent){
-        this.droneState.setZoneID(droneDispatchEvent.getZoneID());
-        this.droneState.setStatus(DroneStatus.ON_ROUTE);
-
-        System.out.println(
-                String.format(
-                        "[DRONE %d] Received dispatch request: {Zone: %d | Coordinates: (%.1f, %.1f)}",
-                        this.droneID,
-                        droneDispatchEvent.getZoneID(),
-                        droneDispatchEvent.getCoords().getX(),
-                        droneDispatchEvent.getCoords().getY()
-                )
-        );
->>>>>>> Stashed changes
-
-    /**
-     * Simulates the drone traveling to a target zone.
-     *
-     * @param zoneID       The ID of the target zone.
-     * @param targetCoords The coordinates of the target location.
-     */
-    private void travelToTarget(int zoneID, Point2D targetCoords){
-        try {
-<<<<<<< Updated upstream
-            double flightTime = this.timeToZone(this.droneState.getCoordinates(), targetCoords);
-            System.out.printf(
-                    "[DRONE %d] On route to Zone: %d | Estimated time: %.2f seconds%n",
-                    this.droneID,
-                    zoneID,
-                    flightTime
-=======
-            double flightTime = this.timeToZone(this.droneState.getCoordinates(), droneDispatchEvent.getCoords());
-            System.out.println(
-                    String.format(
-                            "[DRONE %d] On route to {Zone: %d | Estimated time: %.2f seconds}",
-                            this.droneID,
-                            droneDispatchEvent.getZoneID(),
-                            flightTime
-                    )
->>>>>>> Stashed changes
-            );
-            Thread.sleep((long) flightTime * 1000);
-            this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-    }
-
-
     /**
      * Handles the dispatch of a drone to a specific zone.
      *
@@ -131,7 +77,7 @@ public class DroneSubsystem implements Runnable {
         this.droneState.setStatus(DroneStatus.ON_ROUTE);
 
         System.out.printf(
-                "[DRONE %d] Received dispatch request → Zone: %d | Coordinates: (%.1f, %.1f)%n",
+                "[DRONE %d] Received dispatch request: {Zone: %d | Coordinates: (%.1f, %.1f)}%n",
                 this.droneID,
                 droneDispatchEvent.getZoneID(),
                 droneDispatchEvent.getCoords().getX(),
@@ -152,6 +98,27 @@ public class DroneSubsystem implements Runnable {
         this.sendEventManager.put(arrivedEvent);
     }
 
+    /**
+     * Simulates the drone traveling to a target zone.
+     *
+     * @param zoneID       The ID of the target zone.
+     * @param targetCoords The coordinates of the target location.
+     */
+    private void travelToTarget(int zoneID, Point2D targetCoords){
+        try {
+            double flightTime = this.timeToZone(this.droneState.getCoordinates(), targetCoords);
+            System.out.printf(
+                    "[DRONE %d] On route to Zone: %d | Estimated time: %.2f seconds%n",
+                    this.droneID,
+                    zoneID,
+                    flightTime
+            );
+            Thread.sleep((long) flightTime * 1000);
+            this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Handles the process of dropping agent at a target location.
@@ -176,7 +143,6 @@ public class DroneSubsystem implements Runnable {
         this.droneRefill();
     }
 
-
     /**
      * Simulates the drone returning to the base for refilling.
      */
@@ -195,7 +161,6 @@ public class DroneSubsystem implements Runnable {
         DroneUpdateEvent updateEvent = new DroneUpdateEvent(this.droneID, this.droneState);
         sendEventManager.put(updateEvent);
     }
-
 
     /**
      * Starts the drone subsystem, continuously listening for new incident events.

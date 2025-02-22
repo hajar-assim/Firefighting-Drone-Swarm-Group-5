@@ -30,16 +30,15 @@ public class EventQueueManager {
         this.message = message;
         isEmpty = false;
 
-<<<<<<< Updated upstream
-=======
         if (message instanceof IncidentEvent) {
-            switch (((IncidentEvent) message).getEventType()){
-                case EVENTS_DONE -> System.out.println("[QUEUE] " + this.queueName + ": No more incident events.");
-                default -> System.out.println("[QUEUE] Message added to " + this.queueName + ": {" + message + "}");
+            IncidentEvent incident = (IncidentEvent) message;
+            if (incident.getEventType() == EventType.EVENTS_DONE) {
+                System.out.println("[QUEUE] " + this.queueName + ": No more incident events.");
+            } else {
+                System.out.println("[QUEUE] Message added to " + this.queueName + ": {" + message + "}");
             }
         }
 
->>>>>>> Stashed changes
         notifyAll();
     }
 
@@ -56,7 +55,7 @@ public class EventQueueManager {
             }
         }
 
-        // Variable to retrieve and return message from the queue
+        // Retrieve and return message from the queue
         Event tmpMsg = message;
         message = null;
         isEmpty = true;
