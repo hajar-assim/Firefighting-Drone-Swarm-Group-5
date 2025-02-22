@@ -2,15 +2,11 @@ package subsystems;
 
 import events.EventType;
 import events.IncidentEvent;
-import events.Severity;
 import events.ZoneEvent;
 import main.EventQueueManager;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 
 /**
@@ -128,6 +124,13 @@ public class FireIncidentSubsystem implements Runnable {
         }
     }
 
+
+    /**
+     * Removes the fire from the active fires list once it is extinguished.
+     *
+     * @param zoneID The identifier of the fire zone to be removed.
+     *               If the fire exists in the active fires list, it will be removed.
+     */
     private void removeFire(int zoneID) {
         if (activeFires.contains(zoneID)) {
             activeFires.remove(zoneID);
@@ -135,6 +138,12 @@ public class FireIncidentSubsystem implements Runnable {
         }
     }
 
+
+    /**
+     * Continuously listens for fire extinguishment events and removes corresponding fires
+     * from the active fires list until all fires are extinguished.
+     * This method will block until all active fires have been extinguished.
+     */
     private void waitForFiresToBeExtinguished() {
         while (!activeFires.isEmpty()) {
             IncidentEvent event = (IncidentEvent) receiveEventManager.get();
@@ -144,6 +153,7 @@ public class FireIncidentSubsystem implements Runnable {
             }
         }
     }
+
 
     /**
      * Runs the FireIncidentSubsystem by first parsing the zone data

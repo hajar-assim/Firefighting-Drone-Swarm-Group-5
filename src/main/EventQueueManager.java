@@ -1,8 +1,6 @@
 package main;
 
 import events.Event;
-import events.EventType;
-import events.IncidentEvent;
 
 public class EventQueueManager {
     private boolean isEmpty;
@@ -30,14 +28,14 @@ public class EventQueueManager {
         this.message = message;
         isEmpty = false;
 
-        if (message instanceof IncidentEvent) {
-            IncidentEvent incident = (IncidentEvent) message;
-            if (incident.getEventType() == EventType.EVENTS_DONE) {
-                System.out.println("[QUEUE] " + this.queueName + ": No more incident events.");
-            } else {
-                System.out.println("[QUEUE] Message added to " + this.queueName + ": {" + message + "}");
-            }
-        }
+//        if (message instanceof IncidentEvent) {
+//            IncidentEvent incident = (IncidentEvent) message;
+//            if (incident.getEventType() == EventType.EVENTS_DONE) {
+//                System.out.println("[QUEUE] " + this.queueName + ": No more incident events.");
+//            } else {
+//                System.out.println("[QUEUE] Message added to " + this.queueName + ": {" + message + "}");
+//            }
+//        }
 
         notifyAll();
     }

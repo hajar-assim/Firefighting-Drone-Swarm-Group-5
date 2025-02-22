@@ -3,10 +3,8 @@ package main;
 import events.*;
 import subsystems.DroneState;
 import subsystems.DroneStatus;
-import subsystems.DroneSubsystem;
 
 import java.awt.geom.Point2D;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 

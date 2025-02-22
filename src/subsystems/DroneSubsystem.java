@@ -46,6 +46,7 @@ public class DroneSubsystem implements Runnable {
         return droneID;
     }
 
+
     /**
      * Returns the current state of the drone.
      *
@@ -54,6 +55,7 @@ public class DroneSubsystem implements Runnable {
     public DroneState getDroneState() {
         return droneState;
     }
+
 
     /**
      * Calculates the estimated flight time required to travel between two coordinates.
@@ -66,6 +68,7 @@ public class DroneSubsystem implements Runnable {
         double distance = startCoords.distance(endCoords);
         return ((distance - 46.875) / 15 + 6.25);
     }
+
 
     /**
      * Handles the dispatch of a drone to a specific zone.
@@ -98,6 +101,7 @@ public class DroneSubsystem implements Runnable {
         this.sendEventManager.put(arrivedEvent);
     }
 
+
     /**
      * Simulates the drone traveling to a target zone.
      *
@@ -107,18 +111,28 @@ public class DroneSubsystem implements Runnable {
     private void travelToTarget(int zoneID, Point2D targetCoords){
         try {
             double flightTime = this.timeToZone(this.droneState.getCoordinates(), targetCoords);
-            System.out.printf(
-                    "[DRONE %d] On route to Zone: %d | Estimated time: %.2f seconds%n",
-                    this.droneID,
-                    zoneID,
-                    flightTime
-            );
+            if (zoneID == 0){
+                System.out.printf(
+                        "[DRONE %d] On route to Base | Estimated time: %.2f seconds%n",
+                        this.droneID,
+                        flightTime
+                );
+            }
+            else {
+                System.out.printf(
+                        "[DRONE %d] On route to Zone: %d | Estimated time: %.2f seconds%n",
+                        this.droneID,
+                        zoneID,
+                        flightTime
+                );
+            }
             Thread.sleep((long) flightTime * 1000);
             this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);
         } catch (InterruptedException e){
             e.printStackTrace();
         }
     }
+
 
     /**
      * Handles the process of dropping agent at a target location.
