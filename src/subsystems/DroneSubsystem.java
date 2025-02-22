@@ -38,6 +38,14 @@ public class DroneSubsystem implements Runnable {
         this.running = false;
     }
 
+    public int getDroneID() {
+        return droneID;
+    }
+
+    public DroneState getDroneState() {
+        return droneState;
+    }
+
     private double timeToZone(Point2D startCoords, Point2D endCoords){
         double distance = startCoords.distance(endCoords);
         return ((distance - 46.875) / 15 + 6.25);
@@ -51,6 +59,7 @@ public class DroneSubsystem implements Runnable {
 
         try{
             double flightTime = this.timeToZone(this.droneState.getCoordinates(), droneDispatchEvent.getCoords());
+            System.out.println("Drone " + this.droneID + " on route to Zone: " + droneDispatchEvent.getZoneID() + ", Estimated time: " + flightTime + "s");
             Thread.sleep((long) flightTime * 1000);
             this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);
         } catch (InterruptedException e){
@@ -65,6 +74,7 @@ public class DroneSubsystem implements Runnable {
             return;
         }
 
+        System.out.println("Drone " + this.droneID + " arrived to Zone: " + droneDispatchEvent.getZoneID());
         DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(this.droneID, this.droneState.getZoneID());
         this.sendEventManager.put(arrivedEvent);
     }
@@ -73,6 +83,7 @@ public class DroneSubsystem implements Runnable {
         this.droneState.setStatus(DroneStatus.DROPPING_AGENT);
 
         try{
+            System.out.println("Drone " + this.droneID + " opening nozzle and dropping agent.");
             Thread.sleep(NOZZLE_OPEN_TIME * 1000);
             // Rate of drop = 1L per second
             Thread.sleep(dropAgentEvent.getVolume() * 1000L);
@@ -82,7 +93,7 @@ public class DroneSubsystem implements Runnable {
         this.droneState.setWaterLevel(this.droneState.getWaterLevel() - dropAgentEvent.getVolume());
 
         System.out.println("Dropped " + dropAgentEvent.getVolume() + " liters.");
-        this.sendEventManager.put(dropAgentEvent);
+        this.sendEventManager.put(new DropAgentEvent(dropAgentEvent.getVolume(), this.droneID));
         this.droneRefill();
     }
 

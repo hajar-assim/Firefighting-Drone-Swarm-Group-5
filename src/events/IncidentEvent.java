@@ -34,6 +34,15 @@ public class IncidentEvent extends Event{
 
 
     /**
+     * Sets the type of event.
+     *
+     */
+    public void setEventType(EventType event) {
+        this.eventType = event;
+    }
+
+
+    /**
      * Retrieves the severity level of the incident.
      *
      * @return The severity level as a Severity enum.

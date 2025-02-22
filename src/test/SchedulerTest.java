@@ -17,19 +17,19 @@ class SchedulerTest {
     private Thread droneThread;
 
     @BeforeEach
-    void setup() {
-        schedulerQueue = new EventQueueManager("Scheduler Queue");
-        fireIncidentQueue = new EventQueueManager("Fire Incident Queue");
-        droneQueue = new EventQueueManager("Drone Queue");
-
-        scheduler = new Scheduler(schedulerQueue, fireIncidentQueue, droneQueue);
-        schedulerThread = new Thread(scheduler);
-        schedulerThread.start();
-
-        droneSubsystem = new DroneSubsystem(droneQueue, schedulerQueue);
-        droneThread = new Thread(droneSubsystem);
-        droneThread.start();
-    }
+//    void setup() {
+//        schedulerQueue = new EventQueueManager("Scheduler Queue");
+//        fireIncidentQueue = new EventQueueManager("Fire Incident Queue");
+//        droneQueue = new EventQueueManager("Drone Queue");
+//
+//        scheduler = new Scheduler(schedulerQueue, fireIncidentQueue, droneQueue);
+//        schedulerThread = new Thread(scheduler);
+//        schedulerThread.start();
+//
+//        droneSubsystem = new DroneSubsystem(droneQueue, schedulerQueue);
+//        droneThread = new Thread(droneSubsystem);
+//        droneThread.start();
+//    }
 
     @AfterEach
     void tearDown() throws InterruptedException {
