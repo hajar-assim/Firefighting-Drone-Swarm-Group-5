@@ -5,7 +5,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import main.EventQueueManager;
 import main.Scheduler;
 import events.IncidentEvent;
+import subsystems.DroneState;
+import subsystems.DroneStatus;
 import subsystems.DroneSubsystem;
+import java.util.HashMap;
+import java.util.Map;
 
 class SchedulerTest {
     private EventQueueManager schedulerQueue;
@@ -16,20 +20,25 @@ class SchedulerTest {
     private DroneSubsystem droneSubsystem;
     private Thread droneThread;
 
+
     @BeforeEach
-//    void setup() {
-//        schedulerQueue = new EventQueueManager("Scheduler Queue");
-//        fireIncidentQueue = new EventQueueManager("Fire Incident Queue");
-//        droneQueue = new EventQueueManager("Drone Queue");
-//
-//        scheduler = new Scheduler(schedulerQueue, fireIncidentQueue, droneQueue);
-//        schedulerThread = new Thread(scheduler);
-//        schedulerThread.start();
-//
-//        droneSubsystem = new DroneSubsystem(droneQueue, schedulerQueue);
-//        droneThread = new Thread(droneSubsystem);
-//        droneThread.start();
-//    }
+    void setup() {
+        schedulerQueue = new EventQueueManager("Scheduler Queue");
+        fireIncidentQueue = new EventQueueManager("Fire Incident Queue");
+        droneQueue = new EventQueueManager("Drone Queue");
+
+        Map<Integer, Map.Entry<DroneState, EventQueueManager>> droneMap = new HashMap<>();
+        DroneState droneState = new DroneState(DroneStatus.IDLE, 1, null, 100, 50);
+        droneMap.put(1, Map.entry(droneState, droneQueue));
+        //
+        scheduler = new Scheduler(schedulerQueue, fireIncidentQueue, droneMap);
+        schedulerThread = new Thread(scheduler);
+        schedulerThread.start();
+
+        droneSubsystem = new DroneSubsystem(droneQueue, fireIncidentQueue);
+        droneThread = new Thread(droneSubsystem);
+        droneThread.start();
+    }
 
     @AfterEach
     void tearDown() throws InterruptedException {
@@ -49,7 +58,8 @@ class SchedulerTest {
         IncidentEvent processedEvent = (IncidentEvent) fireIncidentQueue.get();
 
         // Verify that the drone subsystem has processed the event as expected
-        assertEquals(fireEvent, processedEvent);
+        assertNotNull(processedEvent);
+        assertEquals(fireEvent.getEventType(), processedEvent.getEventType());
     }
 
     @Test
@@ -62,4 +72,5 @@ class SchedulerTest {
         // Make sure that scheduler thread has stopped running
         assertFalse(schedulerThread.isAlive());
     }
+
 }

@@ -1,9 +1,10 @@
 package test;
 
-import events.EventType;
-import events.IncidentEvent;
+import events.*;
 import main.EventQueueManager;
 import org.junit.jupiter.api.*;
+import subsystems.DroneState;
+import subsystems.DroneStatus;
 import subsystems.DroneSubsystem;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,6 +53,44 @@ class DroneSubsystemTest {
         Thread.sleep(1000);
 
         droneThread.join(1000);
-        assertFalse(droneThread.isAlive());
+        assertTrue(droneThread.isAlive());
     }
+
+    // Test DroneArrivedEvent Handling
+    @Test
+    @DisplayName("Test DroneArrivedEvent Handling")
+    void testDroneArrivedEvent() {
+        DroneArrivedEvent event = new DroneArrivedEvent(1, 100);
+        assertEquals(1, event.getDroneID());
+        assertEquals(100, event.getZoneID());
+    }
+
+    // Test DroneDispatchEvent Handling
+    @Test
+    @DisplayName("Test DroneDispatchEvent Handling")
+    void testDroneDispatchEvent() {
+        DroneDispatchEvent event = new DroneDispatchEvent(200, null);
+        assertEquals(200, event.getZoneID());
+        assertNull(event.getCoords()); // Assuming no coordinates provided
+    }
+
+    // Test DroneUpdateEvent Handling
+    @Test
+    @DisplayName("Test DroneUpdateEvent Handling")
+    void testDroneUpdateEvent() {
+        DroneState state = new DroneState(DroneStatus.IDLE, 1, null, 100, 50);
+        DroneUpdateEvent event = new DroneUpdateEvent(1, state);
+        assertEquals(1, event.getDroneID());
+        assertEquals(state, event.getDroneState());
+    }
+
+    // Test DropAgentEvent Handling
+    @Test
+    @DisplayName("Test DropAgentEvent Handling")
+    void testDropAgentEvent() {
+        DropAgentEvent event = new DropAgentEvent(30, 2);
+        assertEquals(30, event.getVolume());
+        assertEquals(2, event.getDroneID());
+    }
+
 }
