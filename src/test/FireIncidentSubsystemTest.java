@@ -99,6 +99,7 @@ class FireIncidentSubsystemTest {
         assertEquals(Severity.HIGH, event3.getSeverity());
 
         //simulate scheduler sending back a response so were not busy waiting
+        event3.setEventType(EventType.FIRE_EXTINGUISHED);
         receiveEventManager.put(event3);
 
         // get the second event and make sure it matches our test event
@@ -110,7 +111,9 @@ class FireIncidentSubsystemTest {
         assertEquals(Severity.MODERATE, event4.getSeverity());
 
         //simulate scheduler sending back a response so were not busy waiting
+        event4.setEventType(EventType.FIRE_EXTINGUISHED);
         receiveEventManager.put(event4);
+
 
         //event 3 should not have been sent, instead, end of events file was reached so send EVENTS_DONE event type
         IncidentEvent endEvent = (IncidentEvent) sendEventManager.get();
