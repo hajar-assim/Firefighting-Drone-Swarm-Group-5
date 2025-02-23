@@ -19,6 +19,9 @@ Firefighting-Drone-Swarm-Group-5/
 │   └── fire_zone_sample.csv
 ├── out/
 ├── src/
+    ├── diagrams/
+    │   ├── DRONE_STATE_MACHINE.puml
+    │   └── SCHEDULER_STATE_MACHINE.puml
     ├── events/
     │   ├── EventType.java
     │   ├── IncidentEvent.java

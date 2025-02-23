@@ -1,0 +1,36 @@
+@startuml
+[*] --> Idle
+
+Idle --> OnRoute : dispatchDrone()
+OnRoute --> DroppingAgent : arriveAtFireZone()
+DroppingAgent --> Refilling : dropAgent()
+Refilling --> Idle : refillComplete()
+
+OnRoute --> Idle : missionAborted()
+DroppingAgent --> Idle : emergencyAbort()
+
+Idle --> [*] : shutdown()
+
+state Idle {
+    [*] --> Waiting
+    Waiting : Drone is ready\nAwaiting dispatch
+}
+
+state OnRoute {
+    [*] --> Traveling
+    Traveling : Drone moving\nto assigned fire zone
+}
+
+state DroppingAgent {
+    [*] --> Dropping
+    Dropping : Drone releasing\nfire suppression agent
+}
+
+state Refilling {
+    [*] --> ReturningToBase
+    ReturningToBase : Drone moving\nback to base
+    ReturningToBase --> RefillStation : Arrived at base
+    RefillStation : Refilling agent
+    RefillStation --> Idle : Refill Complete
+}
+@enduml

@@ -1,0 +1,19 @@
+@startuml
+[*] --> WaitingForEvents
+
+WaitingForEvents --> ProcessingFireIncidents : newFireReported()
+ProcessingFireIncidents --> AssigningDrone : droneAvailable()
+ProcessingFireIncidents --> StoringTask : noDronesAvailable()
+
+AssigningDrone --> WaitingForDroneUpdates : dispatchDrone()
+WaitingForDroneUpdates --> MonitoringFireExtinguishment : droneArrived()
+MonitoringFireExtinguishment --> CheckingForPendingFires : fireExtinguished()
+
+CheckingForPendingFires --> AssigningDrone : unassignedTaskExists()
+CheckingForPendingFires --> SendingEventsDone : allFiresHandled()
+SendingEventsDone --> Shutdown : systemTerminated()
+
+StoringTask --> CheckingForPendingFires : droneBecomesAvailable()
+WaitingForDroneUpdates --> CheckingForPendingFires : missionAborted()
+
+@enduml
