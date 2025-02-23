@@ -61,4 +61,8 @@ public class EventQueueManager {
 
         return tmpMsg;
     }
+
+    public boolean isEmpty() {
+        return isEmpty;
+    }
 }

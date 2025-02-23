@@ -71,12 +71,14 @@ public class ZoneEvent extends Event {
      * @throws NumberFormatException if the string format is invalid
      */
     private Point2D parseCoordinates(String coordinates) {
+        // Remove parentheses if present
         coordinates = coordinates.replace("(", "").replace(")", "");
-        String[] parts = coordinates.split(";");
-
+        String[] parts = coordinates.split(",");
+        if (parts.length < 2) {
+            throw new IllegalArgumentException("Invalid coordinates: " + coordinates);
+        }
         double x = Double.parseDouble(parts[0].trim());
         double y = Double.parseDouble(parts[1].trim());
-
         return new Point2D.Double(x, y);
     }
 
