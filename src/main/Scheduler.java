@@ -323,7 +323,7 @@ public class Scheduler implements Runnable {
                 int zoneID = entry.getKey();
                 int remainingWater = entry.getValue();
 
-                if (remainingWater > 0) {
+                if (remainingWater > 0 && !droneAssignments.containsValue(zoneID)) {
                     System.out.println("[SCHEDULER] Reassigning Drone " + droneID + " to continue fire suppression at Zone " + zoneID);
                     assignDrone(zoneID);
                     return; // stop once a fire has been assigned
