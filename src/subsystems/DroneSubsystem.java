@@ -13,15 +13,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DroneSubsystem implements Runnable {
     private static final AtomicInteger nextId = new AtomicInteger(1);
-    private final int MAX_AGENT = 15;
-    private final int NOZZLE_OPEN_TIME = 1;
-    private final double FLIGHT_TIME = 10 * 60; // Flight time in seconds (10 minutes)
-    private final Point2D BASE_COORDINATES = new Point2D.Double(0,0);
     private EventQueueManager sendEventManager;
     private EventQueueManager receiveEventManager;
     private final int droneID;
-    private DroneState droneState;
+    private DroneStates state;
     private volatile boolean running;
+    private int zoneID;
+    private Point2D coordinates;
+    private double flightTime;
+    private int waterLevel;
 
     /**
      * Constructs a {@code DroneSubsystem} with the specified event managers.
@@ -33,8 +33,12 @@ public class DroneSubsystem implements Runnable {
         this.receiveEventManager = receiveEventManager;
         this.sendEventManager = sendEventManager;
         this.droneID = nextId.getAndIncrement();
-        this.droneState = new DroneState(DroneStatus.IDLE, 0, BASE_COORDINATES, FLIGHT_TIME, MAX_AGENT);
+        this.state = new IdleState(this); // Initialize in Idle state
         this.running = false;
+        this.zoneID = 0;
+        this.coordinates = new Point2D.Double(0,0);
+        this.flightTime = 10 * 60;
+        this.waterLevel = 15;
     }
 
     /**
@@ -46,16 +50,103 @@ public class DroneSubsystem implements Runnable {
         return droneID;
     }
 
-
     /**
      * Returns the current state of the drone.
      *
      * @return The drone's state.
      */
-    public DroneState getDroneState() {
-        return droneState;
+    public DroneStates getState() {
+        return state;
     }
 
+    /**
+     * Sets a new state for the drone.
+     *
+     * @param newState The new state to transition to.
+     */
+    public void setState(DroneStates newState) {
+        this.state = newState;
+    }
+
+
+    /**
+     * Gets the ID of the zone where the drone is located.
+     *
+     * @return the zone ID
+     */
+    public int getZoneID() {
+        return zoneID;
+    }
+
+
+    /**
+     * Sets the ID of the zone where the drone is located.
+     *
+     * @param zoneID the new zone ID
+     */
+    public void setZoneID(int zoneID) {
+        this.zoneID = zoneID;
+    }
+
+
+    /**
+     * Gets the current coordinates of the drone.
+     *
+     * @return the coordinates as a {@code Point2D} object
+     */
+    public Point2D getCoordinates() {
+        return coordinates;
+    }
+
+
+    /**
+     * Sets the current coordinates of the drone.
+     *
+     * @param coordinates the new coordinates of the drone
+     */
+    public void setCoordinates(Point2D coordinates) {
+        this.coordinates = coordinates;
+    }
+
+
+    /**
+     * Gets the total flight time of the drone.
+     *
+     * @return the flight time in minutes
+     */
+    public double getFlightTime() {
+        return flightTime;
+    }
+
+
+    /**
+     * Sets the total flight time of the drone.
+     *
+     * @param flightTime the new flight time in minutes
+     */
+    public void setFlightTime(double flightTime) {
+        this.flightTime = flightTime;
+    }
+
+
+    /**
+     * Gets the remaining water level in the drone.
+     *
+     * @return the water level in percentage
+     */
+    public int getWaterLevel() {
+        return waterLevel;
+    }
+
+
+    /**
+     * Sets the remaining water level in the drone.
+     *
+     * @param waterLevel the new water level in percentage
+     */
+    public void setWaterLevel(int waterLevel) {
+        this.waterLevel = waterLevel;
+    }
 
     /**
      * Calculates the estimated flight time required to travel between two coordinates.
@@ -64,117 +155,12 @@ public class DroneSubsystem implements Runnable {
      * @param endCoords   The target coordinates.
      * @return The estimated flight time in seconds.
      */
-    private double timeToZone(Point2D startCoords, Point2D endCoords){
+    public double timeToZone(Point2D startCoords, Point2D endCoords) {
         double distance = startCoords.distance(endCoords);
         return ((distance - 46.875) / 15 + 6.25);
     }
 
 
-    /**
-     * Handles the dispatch of a drone to a specific zone.
-     *
-     * @param droneDispatchEvent The event containing dispatch details.
-     */
-    private void dispatchDrone(DroneDispatchEvent droneDispatchEvent){
-        this.droneState.setZoneID(droneDispatchEvent.getZoneID());
-        this.droneState.setStatus(DroneStatus.ON_ROUTE);
-
-        System.out.printf(
-                "[DRONE %d] Received dispatch request: {Zone: %d | Coordinates: (%.1f, %.1f)}%n",
-                this.droneID,
-                droneDispatchEvent.getZoneID(),
-                droneDispatchEvent.getCoords().getX(),
-                droneDispatchEvent.getCoords().getY()
-        );
-
-        this.travelToTarget(droneDispatchEvent.getZoneID(), droneDispatchEvent.getCoords());
-        this.droneState.setCoordinates(droneDispatchEvent.getCoords());
-
-        if (droneDispatchEvent.getZoneID() == 0){
-            this.running = false;
-            System.out.println("[DRONE " + this.droneID + "] No more events, drone returned to base and shutting down");
-            return;
-        }
-
-        System.out.println("\n[DRONE " + this.droneID + "] Arrived at Zone: " + droneDispatchEvent.getZoneID());
-        DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(this.droneID, this.droneState.getZoneID());
-        this.sendEventManager.put(arrivedEvent);
-    }
-
-
-    /**
-     * Simulates the drone traveling to a target zone.
-     *
-     * @param zoneID       The ID of the target zone.
-     * @param targetCoords The coordinates of the target location.
-     */
-    private void travelToTarget(int zoneID, Point2D targetCoords){
-        try {
-            double flightTime = this.timeToZone(this.droneState.getCoordinates(), targetCoords);
-            if (zoneID == 0){
-                System.out.printf(
-                        "[DRONE %d] On route to Base | Estimated time: %.2f seconds%n",
-                        this.droneID,
-                        flightTime
-                );
-            }
-            else {
-                System.out.printf(
-                        "[DRONE %d] On route to Zone: %d | Estimated time: %.2f seconds%n",
-                        this.droneID,
-                        zoneID,
-                        flightTime
-                );
-            }
-            Thread.sleep((long) flightTime * 1000);
-            this.droneState.setFlightTime(this.droneState.getFlightTime() - flightTime);
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-    }
-
-
-    /**
-     * Handles the process of dropping agent at a target location.
-     *
-     * @param dropAgentEvent The event containing the drop details.
-     */
-    private void dropAgent(DropAgentEvent dropAgentEvent){
-        this.droneState.setStatus(DroneStatus.DROPPING_AGENT);
-
-        try{
-            System.out.println("[DRONE " + this.droneID + "] Opening nozzle and dropping agent.");
-            Thread.sleep(NOZZLE_OPEN_TIME * 1000);
-            // Rate of drop = 1L per second
-            Thread.sleep(dropAgentEvent.getVolume() * 1000L);
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-        this.droneState.setWaterLevel(this.droneState.getWaterLevel() - dropAgentEvent.getVolume());
-
-        System.out.println("[DRONE " + this.droneID + "] Dropped " + dropAgentEvent.getVolume() + " liters.");
-        this.sendEventManager.put(new DropAgentEvent(dropAgentEvent.getVolume(), this.droneID));
-        this.droneRefill();
-    }
-
-    /**
-     * Simulates the drone returning to the base for refilling.
-     */
-    private void droneRefill(){
-        System.out.println("\n[DRONE " + this.droneID + "] Returning to Base (0,0) to refill.");
-        this.droneState.setStatus(DroneStatus.REFILLING);
-
-        this.travelToTarget(0, BASE_COORDINATES);
-
-        this.droneState.setCoordinates(BASE_COORDINATES);
-        this.droneState.setWaterLevel(MAX_AGENT);
-        System.out.println("[DRONE " + this.droneID + "] Refilled to " + this.droneState.getWaterLevel() + " liters.");
-        this.droneState.setStatus(DroneStatus.IDLE);
-
-        // Notify the scheduler that this drone is operational and ready to go
-        DroneUpdateEvent updateEvent = new DroneUpdateEvent(this.droneID, this.droneState);
-        sendEventManager.put(updateEvent);
-    }
 
     /**
      * Starts the drone subsystem, continuously listening for new incident events.
@@ -186,12 +172,20 @@ public class DroneSubsystem implements Runnable {
         this.running = true;
         while (this.running) {
             Event event = receiveEventManager.get();
-
-            if (event instanceof DroneDispatchEvent droneDispatchEvent){
-                this.dispatchDrone(droneDispatchEvent);
-            } else if (event instanceof DropAgentEvent dropAgentEvent) {
-                this.dropAgent(dropAgentEvent);
-            }
+            state.handleEvent(event);
         }
     }
+
+
+    /**
+     * Returns a string representation of the drone's state.
+     *
+     * @return a formatted string describing the drone's state
+     */
+    @Override
+    public String toString() {
+        return String.format("DroneState[zoneID=%d, coordinates=(%.2f, %.2f), flightTime=%.2f, waterLevel=%d%%]",
+                zoneID, coordinates.getX(), coordinates.getY(), flightTime, waterLevel);
+    }
+
 }
