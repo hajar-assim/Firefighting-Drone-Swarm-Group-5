@@ -3,6 +3,7 @@ package subsystems.drone.states;
 import main.Scheduler;
 import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneDispatchEvent;
+import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.Event;
 import subsystems.drone.DroneSubsystem;
@@ -40,7 +41,10 @@ public class OnRouteState implements DroneState {
         Point2D targetCoords = dispatchEvent.getCoords();
         double flightTime = drone.timeToZone(drone.getCoordinates(), targetCoords);
 
-        System.out.println("[DRONE " + drone.getDroneID() + "] On route to Zone: " + drone.getZoneID()
+        boolean returningToBase = dispatchEvent.getZoneID() == 0;
+        String onRoute = returningToBase ? "Base" : "Zone: " + drone.getZoneID();
+
+        System.out.println("[DRONE " + drone.getDroneID() + "] On route to " + onRoute
                 + " | Estimated time: " + String.format("%.2f seconds", flightTime));
 
         // simulate flight time
@@ -51,11 +55,15 @@ public class OnRouteState implements DroneState {
         }
 
         drone.setCoordinates(targetCoords);
-        System.out.println("[DRONE " + drone.getDroneID() + "] Arrived at Zone: " + dispatchEvent.getZoneID());
+        System.out.println("[DRONE " + drone.getDroneID() + "] Arrived at " + onRoute);
 
-        // send arrivedEvent to the Schedule to receive further instructions
-        DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(drone.getDroneID(), dispatchEvent.getZoneID());
-        drone.getSendEventManager().put(arrivedEvent);
+        if (! returningToBase) {
+            // send arrivedEvent to the Schedule to receive further instructions
+            DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(drone.getDroneID(), dispatchEvent.getZoneID());
+            drone.getSendEventManager().put(arrivedEvent);
+        }else{
+            refill(drone);
+        }
     }
 
     @Override
@@ -63,8 +71,20 @@ public class OnRouteState implements DroneState {
         System.out.println("[DRONE " + drone.getDroneID() + "] Cannot drop agent while in transit.");
     }
 
-    @Override
-    public void refill(DroneSubsystem drone) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot refill while in transit.");
+
+    private void refill(DroneSubsystem drone){
+        // reset water level and flight time
+        drone.setWaterLevel(drone.getWaterLevel());
+        drone.setFlightTime(10 * 60);
+        System.out.println("[DRONE " + drone.getDroneID() + "] Refilled to " + drone.getWaterLevel() + " liters.");
+
+        // transition back to IdleState
+        IdleState idleState = new IdleState();
+        System.out.println("[DRONE " + drone.getDroneID() + "] Now idle and ready for dispatch.");
+        drone.setState(idleState);
+
+        // notify the scheduler that the drone is ready
+        DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(drone.getDroneID(), idleState);
+        drone.getSendEventManager().put(droneUpdateEvent);
     }
 }

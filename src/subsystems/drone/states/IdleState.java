@@ -43,8 +43,4 @@ public class IdleState implements DroneState {
         System.out.println("[DRONE " + drone.getDroneID() + "] Cannot drop agent, not at a target zone.");
     }
 
-    @Override
-    public void refill(DroneSubsystem drone) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Already at base, no need to refill.");
-    }
 }

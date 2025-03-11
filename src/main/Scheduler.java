@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Scheduler implements Runnable {
-    public static int sleepMultiplier = 10; // adjust to speed up or slow down (more accurate) the run --> original value = 1000
+    public static int sleepMultiplier = 1000; // adjust to speed up or slow down (more accurate) the run --> original value = 1000
     private EventQueueManager receiveEventManager;
     private EventQueueManager fireIncidentManager;
     private IncidentEvent unassignedTask = null;
@@ -147,6 +147,13 @@ public class Scheduler implements Runnable {
         boolean assigned = assignDrone(event.getZoneID());
 
         if (assigned) {
+            // Give drone some time to set its state to on route
+            try{
+                Thread.sleep(2000);
+            }catch (InterruptedException e){
+                e.printStackTrace();
+            }
+
             event.setEventType(EventType.DRONE_DISPATCHED);
             fireIncidentManager.put(event);
         } else {

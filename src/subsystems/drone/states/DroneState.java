@@ -26,8 +26,4 @@ public interface DroneState {
      */
     void dropAgent(DroneSubsystem drone, DropAgentEvent event);
 
-    /**
-     * Refills the drone’s water/foam tank.
-     */
-    void refill(DroneSubsystem drone);
 }

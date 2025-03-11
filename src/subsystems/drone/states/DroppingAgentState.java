@@ -6,6 +6,8 @@ import subsystems.drone.events.DroneDispatchEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.DroneSubsystem;
 
+import java.awt.geom.Point2D;
+
 public class DroppingAgentState implements DroneState {
 
     @Override
@@ -38,15 +40,12 @@ public class DroppingAgentState implements DroneState {
         // notify system that agent was dropped
         drone.getSendEventManager().put(new DropAgentEvent(event.getVolume(), drone.getDroneID()));
 
-        // transition to RefillingState
+        // transition to On route and Refill
         System.out.println("[DRONE " + drone.getDroneID() + "] Returning to base to refill.");
-        RefillingState refillingState = new RefillingState();
-        drone.setState(refillingState);
-        refillingState.refill(drone);
-    }
 
-    @Override
-    public void refill(DroneSubsystem drone) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot refill, currently dropping agent.");
+        OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0,0)));
+        drone.setZoneID(0);
+        drone.setState(toBase);
+        drone.getState().travel(drone);
     }
 }

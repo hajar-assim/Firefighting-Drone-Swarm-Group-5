@@ -82,15 +82,13 @@ public class FireIncidentSubsystem implements Runnable {
                 IncidentEvent event = (IncidentEvent) receiveEventManager.get();
                 System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
 
-                // If the fire was extinguished before all events were reported, remove it
-                if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
-                    removeFire(event.getZoneID());
-                }
-
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                while(event.getEventType() != EventType.DRONE_DISPATCHED){
+                    // If the fire was extinguished before all events were reported, remove it
+                    if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
+                        removeFire(event.getZoneID());
+                    }
+                    event = (IncidentEvent) receiveEventManager.get();
+                    System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
                 }
             }
 
