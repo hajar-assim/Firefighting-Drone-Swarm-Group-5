@@ -1,9 +1,12 @@
 package test;
 
-import events.*;
 import org.junit.jupiter.api.*;
-import subsystems.DroneState;
-import subsystems.DroneStatus;
+import subsystems.drone.events.DroneArrivedEvent;
+import subsystems.drone.events.DroneDispatchEvent;
+import subsystems.drone.events.DroneUpdateEvent;
+import subsystems.drone.events.DropAgentEvent;
+import subsystems.drone.states.DroneState;
+import subsystems.drone.states.IdleState;
 
 import java.awt.geom.Point2D;
 
@@ -36,11 +39,13 @@ class EventTests {
     @Test
     @DisplayName("Test DroneUpdateEvent class")
     void testDroneUpdateEvent() {
-        DroneState state = new DroneState(DroneStatus.IDLE, 1, null, 100, 50);
+        DroneState state = new IdleState();
         DroneUpdateEvent event = new DroneUpdateEvent(1, state);
+
         assertEquals(1, event.getDroneID());
         assertEquals(state, event.getDroneState());
-        event.fromString("");
+
+        assertDoesNotThrow(() -> event.fromString(""));
     }
 
     // Test DropAgentEvent class

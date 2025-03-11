@@ -1,24 +1,19 @@
 package test;
 
-import events.*;
+import subsystems.EventType;
 import main.EventQueueManager;
 import org.junit.jupiter.api.*;
-import org.opentest4j.AssertionFailedError;
-import subsystems.FireIncidentSubsystem;
+import subsystems.fire_incident.FireIncidentSubsystem;
+import subsystems.fire_incident.events.IncidentEvent;
+import subsystems.fire_incident.events.Severity;
+import subsystems.fire_incident.events.ZoneEvent;
 
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.time.Duration;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.lang.reflect.Field;
 
 
 import static org.junit.jupiter.api.Assertions.*;

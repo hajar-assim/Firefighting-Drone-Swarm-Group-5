@@ -1,4 +1,4 @@
-package events;
+package subsystems;
 
 /**
  * EventType represents the different types of events in the fire incident and drone response system.

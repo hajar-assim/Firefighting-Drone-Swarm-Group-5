@@ -1,6 +1,7 @@
-package events;
+package subsystems.drone.events;
 
-import subsystems.DroneState;
+import subsystems.Event;
+import subsystems.drone.states.*;
 
 /**
  * Represents an event that updates the state of a specific drone.
@@ -61,6 +62,6 @@ public class DroneUpdateEvent extends Event {
      */
     @Override
     public void fromString(String s) {
-        // Implementation needed based on the expected format
+        // implementation needed based on the expected format
     }
 }

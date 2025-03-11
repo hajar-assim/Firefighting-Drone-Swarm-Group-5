@@ -1,14 +1,10 @@
 package test;
 
-import events.EventType;
-import events.IncidentEvent;
-import events.Severity;
-import events.ZoneEvent;
+import subsystems.fire_incident.events.ZoneEvent;
 import org.junit.jupiter.api.*;
 
 import java.awt.geom.Point2D;
 import java.lang.reflect.Method;
-import java.util.AbstractMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -1,4 +1,4 @@
-package events;
+package subsystems;
 
 /**
  * Represents an abstract event with a timestamp.

@@ -1,8 +1,7 @@
 package main;
 
-import subsystems.DroneState;
-import subsystems.FireIncidentSubsystem;
-import subsystems.DroneSubsystem;
+import subsystems.fire_incident.FireIncidentSubsystem;
+import subsystems.drone.DroneSubsystem;
 
 import java.util.*;
 
@@ -12,8 +11,8 @@ public class Main {
         System.out.println("\n === Firefighting Drone System Starting... ===\n");
         String inputFolderPath = "data";
         int numDrones = 1;
-        Map<Integer, Map.Entry<DroneState, EventQueueManager>> dronesByID = new HashMap<>();
-        ArrayList<Thread> droneThreads = new ArrayList<Thread>();
+        Map<Integer, DroneSubsystem> dronesByID = new HashMap<>();
+        ArrayList<Thread> droneThreads = new ArrayList<>();
 
         EventQueueManager schedulerManager = new EventQueueManager("Scheduler Queue");
         EventQueueManager fireIncidentManager = new EventQueueManager("Fire Incident Queue");
@@ -21,14 +20,11 @@ public class Main {
         // create fire incident subsystem thread
         Thread fireIncidentThread = new Thread(new FireIncidentSubsystem(fireIncidentManager, schedulerManager, inputFolderPath));
 
-        for (int i=0; i<numDrones; i++){
-            EventQueueManager droneManager = new EventQueueManager("Drone " + i+1 + " Queue");
+        for (int i=0; i < numDrones; i++){
+            EventQueueManager droneManager = new EventQueueManager("Drone " + (i + 1) + " Queue");
             DroneSubsystem drone = new DroneSubsystem(droneManager, schedulerManager);
             droneThreads.add(new Thread(drone));
-            dronesByID.put(
-                    drone.getDroneID(),
-                    new AbstractMap.SimpleEntry<>(drone.getDroneState(), droneManager)
-            );
+            dronesByID.put(drone.getDroneID(), drone);
         }
 
         // create scheduler thread

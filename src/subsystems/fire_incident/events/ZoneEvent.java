@@ -1,4 +1,6 @@
-package events;
+package subsystems.fire_incident.events;
+
+import subsystems.Event;
 
 import java.awt.geom.Point2D;
 
