@@ -1,13 +1,9 @@
 package test;
 
-import events.EventType;
-import events.IncidentEvent;
-import events.Severity;
+import subsystems.EventType;
+import subsystems.fire_incident.events.IncidentEvent;
+import subsystems.fire_incident.events.Severity;
 import org.junit.jupiter.api.*;
-
-import java.awt.geom.Point2D;
-import java.lang.reflect.Method;
-import java.util.AbstractMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,7 +13,7 @@ class IncidentEventTest {
 
     @BeforeEach
     void setUp() {
-        incidentEvent = new IncidentEvent("14:03:15", 1, "FIRE_DETECTED", "HIGH");
+        incidentEvent = new IncidentEvent("14:03:15", 1, EventType.FIRE_DETECTED, Severity.HIGH);
     }
 
     @Test

@@ -1,4 +1,6 @@
-package events;
+package subsystems.drone.events;
+
+import subsystems.Event;
 
 /**
  * Represents an event when a drone arrives at a specific zone.

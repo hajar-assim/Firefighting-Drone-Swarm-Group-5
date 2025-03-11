@@ -1,9 +1,12 @@
-package subsystems;
+package subsystems.fire_incident;
 
-import events.EventType;
-import events.IncidentEvent;
-import events.ZoneEvent;
+import subsystems.EventType;
+import subsystems.fire_incident.events.IncidentEvent;
+import subsystems.fire_incident.events.Severity;
+import subsystems.fire_incident.events.ZoneEvent;
 import main.EventQueueManager;
+
+import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -15,6 +18,7 @@ import java.util.HashSet;
  * to the EventQueueManager.
  */
 public class FireIncidentSubsystem implements Runnable {
+    public static Point2D BASE_COORDINATES = new Point2D.Double(0,0);
     private final String INPUT_FOLDER;
     private File eventFile;
     private File zoneFile;
@@ -70,13 +74,13 @@ public class FireIncidentSubsystem implements Runnable {
                 String[] parts = line.split(",");
                 int zoneId = Integer.parseInt(parts[1]);
 
-                IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3]);
-                System.out.println("\n[FIRE INCIDENT SYSTEM] New incident detected: " + incident);
+                IncidentEvent incident = new IncidentEvent(parts[0], zoneId, EventType.fromString(parts[2]), Severity.fromString(parts[3]));
+                System.out.println("\n[FIRE INCIDENT SYSTEM] New incident detected: {" + incident + "}");
                 sendEventManager.put(incident);
                 activeFires.add(zoneId);
 
                 IncidentEvent event = (IncidentEvent) receiveEventManager.get();
-                System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: " + event);
+                System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
 
                 // If the fire was extinguished before all events were reported, remove it
                 if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
@@ -94,7 +98,7 @@ public class FireIncidentSubsystem implements Runnable {
             waitForFiresToBeExtinguished();
 
             // only send EVENTS_DONE once all fires are extinguished
-            IncidentEvent noMoreIncidents = new IncidentEvent("", 0, "EVENTS_DONE", "NONE");
+            IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE);
             System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
             sendEventManager.put(noMoreIncidents);
 

@@ -1,13 +1,15 @@
 package test;
 
 
-import events.DroneArrivedEvent;
-import events.DropAgentEvent;
-import events.Event;
+import subsystems.EventType;
+import subsystems.drone.events.DroneArrivedEvent;
+import subsystems.drone.events.DropAgentEvent;
+import subsystems.Event;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 import main.EventQueueManager;
-import events.IncidentEvent;
+import subsystems.fire_incident.events.IncidentEvent;
+import subsystems.fire_incident.events.Severity;
 
 public class EventQueueManagerTest {
     private EventQueueManager queueManager;
@@ -18,7 +20,7 @@ public class EventQueueManagerTest {
         // Create a new EventQueueManager for testing.
         queueManager = new EventQueueManager("Test Queue");
         // Create a sample event.
-        event = new IncidentEvent("24:24:24",10,"FIRE_DETECTED","MODERATE");
+        event = new IncidentEvent("24:24:24",10, EventType.FIRE_DETECTED, Severity.MODERATE);
     }
 
     @Test

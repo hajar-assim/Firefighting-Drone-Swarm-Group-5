@@ -4,8 +4,8 @@
 //import main.EventQueueManager;
 //import org.junit.Before;
 //import org.junit.Test;
-//import subsystems.DroneStatus;
-//import subsystems.DroneSubsystem;
+//import subsystems.drone_states.DroneStatus;
+//import subsystems.drone.DroneSubsystem;
 //
 //import java.awt.geom.Point2D;
 //

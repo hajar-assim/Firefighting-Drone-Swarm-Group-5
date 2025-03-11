@@ -1,7 +1,10 @@
-package subsystems;
+package subsystems.drone;
 
-import events.*;
 import main.EventQueueManager;
+import subsystems.Event;
+import subsystems.drone.states.DroneState;
+import subsystems.drone.states.IdleState;
+import subsystems.fire_incident.FireIncidentSubsystem;
 
 import java.awt.geom.Point2D;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,7 +19,7 @@ public class DroneSubsystem implements Runnable {
     private EventQueueManager sendEventManager;
     private EventQueueManager receiveEventManager;
     private final int droneID;
-    private DroneStates state;
+    private DroneState state;
     private volatile boolean running;
     private int zoneID;
     private Point2D coordinates;
@@ -33,10 +36,10 @@ public class DroneSubsystem implements Runnable {
         this.receiveEventManager = receiveEventManager;
         this.sendEventManager = sendEventManager;
         this.droneID = nextId.getAndIncrement();
-        this.state = new IdleState(this); // Initialize in Idle state
+        this.state = new IdleState();
         this.running = false;
         this.zoneID = 0;
-        this.coordinates = new Point2D.Double(0,0);
+        this.coordinates = FireIncidentSubsystem.BASE_COORDINATES;
         this.flightTime = 10 * 60;
         this.waterLevel = 15;
     }
@@ -51,12 +54,30 @@ public class DroneSubsystem implements Runnable {
     }
 
     /**
+     * Returns the receiving queue manager of the drone.
+     *
+     * @return The EventQueueManager.
+     */
+    public EventQueueManager getRecieveEventManager(){
+        return this.receiveEventManager;
+    }
+
+    /**
+     * Returns the sending queue manager of the drone.
+     *
+     * @return The EventQueueManager.
+     */
+    public EventQueueManager getSendEventManager(){
+        return this.sendEventManager;
+    }
+
+    /**
      * Returns the current state of the drone.
      *
      * @return The drone's state.
      */
-    public DroneStates getState() {
-        return state;
+    public DroneState getState() {
+        return this.state;
     }
 
     /**
@@ -64,7 +85,7 @@ public class DroneSubsystem implements Runnable {
      *
      * @param newState The new state to transition to.
      */
-    public void setState(DroneStates newState) {
+    public void setState(DroneState newState) {
         this.state = newState;
     }
 
@@ -172,10 +193,9 @@ public class DroneSubsystem implements Runnable {
         this.running = true;
         while (this.running) {
             Event event = receiveEventManager.get();
-            state.handleEvent(event);
+            state.handleEvent(this, event);
         }
     }
-
 
     /**
      * Returns a string representation of the drone's state.

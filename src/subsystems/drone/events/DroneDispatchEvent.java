@@ -1,4 +1,6 @@
-package events;
+package subsystems.drone.events;
+
+import subsystems.Event;
 
 import java.awt.geom.Point2D;
 

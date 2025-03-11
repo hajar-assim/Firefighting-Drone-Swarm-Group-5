@@ -1,4 +1,6 @@
-package events;
+package subsystems.drone.events;
+
+import subsystems.Event;
 
 /**
  * Represents an event where a drone drops an extinguishing agent.

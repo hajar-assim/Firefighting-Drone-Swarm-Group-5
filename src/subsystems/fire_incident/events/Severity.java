@@ -1,4 +1,4 @@
-package events;
+package subsystems.fire_incident.events;
 
 /**
  * Severity represents the level of severity for a fire incident.
@@ -27,20 +27,15 @@ public enum Severity {
 
     /**
      * Converts a string to a Severity enum, handling case variations.
-     * @param str The string representation of severity (e.g., "high", "LOW").
      * @return The corresponding Severity enum.
      * @throws IllegalArgumentException if the input is invalid.
      */
-    public static Severity fromString(String str) {
-        if (str == null) {
-            throw new IllegalArgumentException("Severity level cannot be null");
+    public static Severity fromString(String level) {
+        for (Severity severity : values()) {
+            if (severity.name().equalsIgnoreCase(level)) {
+                return severity;
+            }
         }
-        return switch (str.trim().toUpperCase()) {
-            case "NONE" -> NONE;
-            case "LOW" -> LOW;
-            case "MODERATE" -> MODERATE;
-            case "HIGH" -> HIGH;
-            default -> throw new IllegalArgumentException("Invalid Severity Level: " + str);
-        };
+        throw new IllegalArgumentException("Invalid Severity: " + level);
     }
 }

@@ -1,6 +1,6 @@
 package main;
 
-import events.Event;
+import subsystems.Event;
 
 public class EventQueueManager {
     private boolean isEmpty;
