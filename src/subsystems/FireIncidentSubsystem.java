@@ -1,12 +1,8 @@
 package subsystems;
 
-import events.EventType;
-import events.IncidentEvent;
-import events.ZoneEvent;
-import main.EventQueueManager;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
+import events.*;
+import java.io.*;
+import java.net.*;
 import java.util.HashSet;
 
 /**
@@ -14,26 +10,58 @@ import java.util.HashSet;
  * It reads input files containing fire incident events and zone data, then adds incidents
  * to the EventQueueManager.
  */
-public class FireIncidentSubsystem implements Runnable {
+public class FireIncidentSubsystem {
     private final String INPUT_FOLDER;
     private File eventFile;
     private File zoneFile;
-    private EventQueueManager receiveEventManager;
-    private EventQueueManager sendEventManager;
+    private DatagramSocket receiveSocket;
+    private DatagramSocket sendSocket;
+    private InetAddress schedulerAddress;
+    private int schedulerPort;
     private HashSet<Integer> activeFires = new HashSet<>();
 
     /**
      * Constructs a FireIncidentSubsystem.
-     *
-     * @param receiveEventManager The queue manager responsible for handling received events.
-     * @param sendEventManager The queue manager responsible for sending events.
      * @param inputFolderPath The path to input folder.
      */
-    public FireIncidentSubsystem(EventQueueManager receiveEventManager, EventQueueManager sendEventManager, String inputFolderPath) {
-        this.receiveEventManager = receiveEventManager;
-        this.sendEventManager = sendEventManager;
+    public FireIncidentSubsystem(String inputFolderPath, InetAddress schedulerAddress, int schedulerPort) {
+        try{
+            this.receiveSocket = new DatagramSocket();
+            this.sendSocket = new DatagramSocket();
+        } catch (SocketException se) {   // Can't create the socket.
+            se.printStackTrace();
+            System.exit(1);
+        }
+
+        this.schedulerAddress = schedulerAddress;
+        this.schedulerPort = schedulerPort;
         this.INPUT_FOLDER = inputFolderPath;
         this.getInputFiles();
+    }
+
+    private void send(Event incident) throws IOException{
+        // Serialize incident
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+        objectOutputStream.writeObject(incident);
+        byte msg[] = byteArrayOutputStream.toByteArray();
+
+        DatagramPacket packet = new DatagramPacket(msg, msg.length, schedulerAddress, schedulerPort);
+
+        sendSocket.send(packet);
+    }
+
+    private Event receive() throws IOException, ClassNotFoundException {
+        byte data[] = new byte[100];
+        DatagramPacket packet = new DatagramPacket(data, data.length);
+
+        receiveSocket.receive(packet);
+
+        // Deserialize object
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
+        ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
+
+        return (Event) objectInputStream.readObject();
     }
 
     /**
@@ -72,10 +100,10 @@ public class FireIncidentSubsystem implements Runnable {
 
                 IncidentEvent incident = new IncidentEvent(parts[0], zoneId, parts[2], parts[3]);
                 System.out.println("\n[FIRE INCIDENT SYSTEM] New incident detected: " + incident);
-                sendEventManager.put(incident);
+                send(incident);
                 activeFires.add(zoneId);
 
-                IncidentEvent event = (IncidentEvent) receiveEventManager.get();
+                IncidentEvent event = (IncidentEvent) receive();
                 System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: " + event);
 
                 // If the fire was extinguished before all events were reported, remove it
@@ -96,7 +124,7 @@ public class FireIncidentSubsystem implements Runnable {
             // only send EVENTS_DONE once all fires are extinguished
             IncidentEvent noMoreIncidents = new IncidentEvent("", 0, "EVENTS_DONE", "NONE");
             System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
-            sendEventManager.put(noMoreIncidents);
+            send(noMoreIncidents);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -117,7 +145,7 @@ public class FireIncidentSubsystem implements Runnable {
                 String[] parts = line.split(",");
                 int zoneId = Integer.parseInt(parts[0]);
                 ZoneEvent zoneEvent = new ZoneEvent(zoneId, parts[1], parts[2]);
-                sendEventManager.put(zoneEvent);
+                send(zoneEvent);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -146,10 +174,14 @@ public class FireIncidentSubsystem implements Runnable {
      */
     private void waitForFiresToBeExtinguished() {
         while (!activeFires.isEmpty()) {
-            IncidentEvent event = (IncidentEvent) receiveEventManager.get();
+            try{
+                IncidentEvent event = (IncidentEvent) receive();
 
-            if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
-                removeFire(event.getZoneID());
+                if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
+                    removeFire(event.getZoneID());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
@@ -159,9 +191,22 @@ public class FireIncidentSubsystem implements Runnable {
      * Runs the FireIncidentSubsystem by first parsing the zone data
      * and then processing the event file to queue incident events.
      */
-    @Override
     public void run() {
         this.parseZones();
         this.parseEvents();
     }
+
+    public static void main(String args[]) {
+        InetAddress address = null;
+        try{
+            address = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+        FireIncidentSubsystem fireIncidentSubsystem = new FireIncidentSubsystem("data", address, 5000);
+
+        fireIncidentSubsystem.run();
+    }
+
 }
