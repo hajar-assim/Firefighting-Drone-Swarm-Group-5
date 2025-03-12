@@ -1,9 +1,10 @@
 package subsystems;
 
 import events.*;
-import main.EventQueueManager;
 
 import java.awt.geom.Point2D;
+import java.io.*;
+import java.net.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -17,24 +18,55 @@ public class DroneSubsystem implements Runnable {
     private final int NOZZLE_OPEN_TIME = 1;
     private final double FLIGHT_TIME = 10 * 60; // Flight time in seconds (10 minutes)
     private final Point2D BASE_COORDINATES = new Point2D.Double(0,0);
-    private EventQueueManager sendEventManager;
-    private EventQueueManager receiveEventManager;
+    private DatagramSocket sendSocket;
+    private DatagramSocket receiveSocket;
+    private InetAddress schedulerAddress;
+    private int schedulerPort;
     private final int droneID;
     private DroneState droneState;
     private volatile boolean running;
 
     /**
      * Constructs a {@code DroneSubsystem} with the specified event managers.
-     *
-     * @param receiveEventManager The event queue manager from which the subsystem receives incident events.
-     * @param sendEventManager    The event queue manager to which the subsystem sends processed events.
      */
-    public DroneSubsystem(EventQueueManager receiveEventManager, EventQueueManager sendEventManager) {
-        this.receiveEventManager = receiveEventManager;
-        this.sendEventManager = sendEventManager;
+    public DroneSubsystem(InetAddress schedulerAddress, int schedulerPort) {
+        try{
+            this.receiveSocket = new DatagramSocket();
+            this.sendSocket = new DatagramSocket();
+        } catch (SocketException se) {   // Can't create the socket.
+            se.printStackTrace();
+            System.exit(1);
+        }
+        this.schedulerAddress = schedulerAddress;
+        this.schedulerPort = schedulerPort;
         this.droneID = nextId.getAndIncrement();
         this.droneState = new DroneState(DroneStatus.IDLE, 0, BASE_COORDINATES, FLIGHT_TIME, MAX_AGENT);
         this.running = false;
+    }
+
+    private void send(Event incident) throws IOException {
+        // Serialize incident
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+        objectOutputStream.writeObject(incident);
+        byte msg[] = byteArrayOutputStream.toByteArray();
+
+        DatagramPacket packet = new DatagramPacket(msg, msg.length, schedulerAddress, schedulerPort);
+
+        sendSocket.send(packet);
+    }
+
+    private Event receive() throws IOException, ClassNotFoundException {
+        byte data[] = new byte[100];
+        DatagramPacket packet = new DatagramPacket(data, data.length);
+
+        receiveSocket.receive(packet);
+
+        // Deserialize object
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
+        ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
+
+        return (Event) objectInputStream.readObject();
     }
 
     /**
@@ -98,7 +130,12 @@ public class DroneSubsystem implements Runnable {
 
         System.out.println("\n[DRONE " + this.droneID + "] Arrived at Zone: " + droneDispatchEvent.getZoneID());
         DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(this.droneID, this.droneState.getZoneID());
-        this.sendEventManager.put(arrivedEvent);
+
+        try{
+            send(arrivedEvent);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -153,7 +190,13 @@ public class DroneSubsystem implements Runnable {
         this.droneState.setWaterLevel(this.droneState.getWaterLevel() - dropAgentEvent.getVolume());
 
         System.out.println("[DRONE " + this.droneID + "] Dropped " + dropAgentEvent.getVolume() + " liters.");
-        this.sendEventManager.put(new DropAgentEvent(dropAgentEvent.getVolume(), this.droneID));
+
+        try{
+            send(new DropAgentEvent(dropAgentEvent.getVolume(), this.droneID));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         this.droneRefill();
     }
 
@@ -173,7 +216,12 @@ public class DroneSubsystem implements Runnable {
 
         // Notify the scheduler that this drone is operational and ready to go
         DroneUpdateEvent updateEvent = new DroneUpdateEvent(this.droneID, this.droneState);
-        sendEventManager.put(updateEvent);
+
+        try{
+            send(updateEvent);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -185,7 +233,12 @@ public class DroneSubsystem implements Runnable {
     public void run() {
         this.running = true;
         while (this.running) {
-            Event event = receiveEventManager.get();
+            Event event = null;
+            try{
+                event = receive();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             if (event instanceof DroneDispatchEvent droneDispatchEvent){
                 this.dispatchDrone(droneDispatchEvent);
