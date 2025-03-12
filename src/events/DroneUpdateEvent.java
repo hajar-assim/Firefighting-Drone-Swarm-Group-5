@@ -40,27 +40,4 @@ public class DroneUpdateEvent extends Event {
     public DroneState getDroneState() {
         return droneState;
     }
-
-
-    /**
-     * Returns a string representation of the event.
-     *
-     * @return a formatted string describing the event
-     */
-    @Override
-    public String toString() {
-        return String.format("DroneUpdateEvent[droneID=%d, droneState=%s]",
-                droneID, droneState);
-    }
-
-
-    /**
-     * Parses a string representation of the event and updates the object's state.
-     *
-     * @param s the string to parse (format not yet defined)
-     */
-    @Override
-    public void fromString(String s) {
-        // Implementation needed based on the expected format
-    }
 }

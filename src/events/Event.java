@@ -27,21 +27,4 @@ public abstract class Event implements Serializable {
     public String getTimeStamp() {
         return this.timeStamp;
     }
-
-
-    /**
-     * Returns a string representation of the event.
-     *
-     * @return a formatted string describing the event
-     */
-    @Override
-    public abstract String toString();
-
-
-    /**
-     * Parses a string representation of the event and updates the object's state.
-     *
-     * @param s the string to parse
-     */
-    public abstract void fromString(String s);
 }

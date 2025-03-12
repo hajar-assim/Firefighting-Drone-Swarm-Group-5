@@ -79,27 +79,4 @@ public class ZoneEvent extends Event {
 
         return new Point2D.Double(x, y);
     }
-
-
-    /**
-     * Returns a string representation of the event.
-     *
-     * @return a formatted string describing the event
-     */
-    @Override
-    public String toString() {
-        return String.format("ZoneEvent[zoneID=%d, center=(%.2f, %.2f)]",
-                zoneID, center.getX(), center.getY());
-    }
-
-
-    /**
-     * Parses a string representation of the event and updates the object's state.
-     *
-     * @param s the string to parse (format not yet defined)
-     */
-    @Override
-    public void fromString(String s) {
-        // Implementation needed based on the expected format
-    }
 }

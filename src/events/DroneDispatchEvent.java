@@ -41,27 +41,4 @@ public class DroneDispatchEvent extends Event {
     public Point2D getCoords() {
         return coords;
     }
-
-
-    /**
-     * Returns a string representation of the event.
-     *
-     * @return a formatted string describing the event
-     */
-    @Override
-    public String toString() {
-        return String.format("DroneDispatchEvent[zoneID=%d, coords=(%.2f, %.2f)]",
-                zoneID, coords.getX(), coords.getY());
-    }
-
-
-    /**
-     * Parses a string representation of the event and updates the object's state.
-     *
-     * @param s the string to parse (format not yet defined)
-     */
-    @Override
-    public void fromString(String s) {
-        // Implementation needed based on the expected format
-    }
 }

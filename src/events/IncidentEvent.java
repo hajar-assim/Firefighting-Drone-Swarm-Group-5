@@ -60,30 +60,4 @@ public class IncidentEvent extends Event{
     public int getZoneID() {
         return this.zoneID;
     }
-
-    /**
-     * Returns a string representation of the IncidentEvent object.
-     *
-     * @return A string containing the timestamp, zone ID, event type, severity, and coordinates.
-     */
-    @Override
-    public String toString() {
-        if ("fire_extinguished".equals(this.eventType)) {
-            return String.format(
-                    "Zone: %d | Type: %s | Severity: %s",
-                    this.zoneID, this.eventType, this.severity
-            );
-        } else {
-            return String.format(
-                    "Time: %s | Zone: %d | Type: %s | Severity: %s",
-                    this.getTimeStamp(), this.zoneID, this.eventType, this.severity
-            );
-        }
-    }
-
-
-    @Override
-    public void fromString(String s) {
-
-    }
 }

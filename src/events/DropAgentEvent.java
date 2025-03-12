@@ -52,27 +52,4 @@ public class DropAgentEvent extends Event {
     public int getDroneID() {
         return droneID;
     }
-
-
-    /**
-     * Returns a string representation of the event.
-     *
-     * @return a formatted string describing the event
-     */
-    @Override
-    public String toString() {
-        return String.format("DropAgentEvent[volume=%d, droneID=%s]",
-                volume, (droneID == -1 ? "N/A" : droneID));
-    }
-
-
-    /**
-     * Parses a string representation of the event and updates the object's state.
-     *
-     * @param s the string to parse (format not yet defined)
-     */
-    @Override
-    public void fromString(String s) {
-        // Implementation needed based on the expected format
-    }
 }
