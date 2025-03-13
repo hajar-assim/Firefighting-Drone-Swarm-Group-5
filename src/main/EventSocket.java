@@ -15,28 +15,47 @@ public class EventSocket {
         }
     }
 
-    public void send(Event incident, InetAddress address, int port) throws IOException{
-        // Serialize incident
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
-        objectOutputStream.writeObject(incident);
-        byte msg[] = byteArrayOutputStream.toByteArray();
-
-        DatagramPacket packet = new DatagramPacket(msg, msg.length, address, port);
-
-        socket.send(packet);
+    public EventSocket(int port){
+        try{
+            socket = new DatagramSocket(port);
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public Event receive() throws IOException, ClassNotFoundException {
+    public void send(Event event, InetAddress address, int port) {
+        // Serialize event
+        try{
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+            objectOutputStream.writeObject(event);
+            byte msg[] = byteArrayOutputStream.toByteArray();
+
+            DatagramPacket packet = new DatagramPacket(msg, msg.length, address, port);
+
+            socket.send(packet);
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public Event receive() {
         byte data[] = new byte[100];
         DatagramPacket packet = new DatagramPacket(data, data.length);
 
-        socket.receive(packet);
+        Event event = null;
 
-        // Deserialize object
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
-        ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
+        try{
+            socket.receive(packet);
 
-        return (Event) objectInputStream.readObject();
+            // Deserialize object
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
+            ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
+            event = (Event) objectInputStream.readObject();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+        return event;
     }
 }

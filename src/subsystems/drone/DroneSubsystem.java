@@ -1,6 +1,5 @@
 package subsystems.drone;
 
-import main.EventQueueManager;
 import subsystems.Event;
 import subsystems.drone.states.DroneState;
 import subsystems.drone.states.IdleState;
@@ -15,16 +14,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * and dispatches responses to the send event queue.
  */
 public class DroneSubsystem implements Runnable {
-    private static final AtomicInteger nextId = new AtomicInteger(1);
     private EventQueueManager sendEventManager;
     private EventQueueManager receiveEventManager;
-    private final int droneID;
-    private DroneState state;
-    private volatile boolean running;
-    private int zoneID;
-    private Point2D coordinates;
-    private double flightTime;
-    private int waterLevel;
+    DroneInfo info;
+
 
     /**
      * Constructs a {@code DroneSubsystem} with the specified event managers.
@@ -35,13 +28,7 @@ public class DroneSubsystem implements Runnable {
     public DroneSubsystem(EventQueueManager receiveEventManager, EventQueueManager sendEventManager) {
         this.receiveEventManager = receiveEventManager;
         this.sendEventManager = sendEventManager;
-        this.droneID = nextId.getAndIncrement();
-        this.state = new IdleState();
-        this.running = false;
-        this.zoneID = 0;
-        this.coordinates = FireIncidentSubsystem.BASE_COORDINATES;
-        this.flightTime = 10 * 60;
-        this.waterLevel = 15;
+        info = new DroneInfo();
     }
 
     /**
@@ -49,8 +36,26 @@ public class DroneSubsystem implements Runnable {
      *
      * @return The drone ID.
      */
-    public int getDroneID() {
-        return droneID;
+    public int getDroneID(){
+        return info.getDroneID();
+    }
+
+    /**
+     * Returns the info of the drone.
+     *
+     * @return The drone info.
+     */
+    public DroneInfo getDroneInfo(){
+        return info;
+    }
+
+    /**
+     * Sets the current info of the drone.
+     *
+     * @param info the new info of the drone
+     */
+    public void setDroneInfo(DroneInfo info){
+        this.info = info;
     }
 
     /**
@@ -76,8 +81,8 @@ public class DroneSubsystem implements Runnable {
      *
      * @return The drone's state.
      */
-    public DroneState getState() {
-        return this.state;
+    public DroneState getState(){
+        return info.getState();
     }
 
     /**
@@ -85,8 +90,8 @@ public class DroneSubsystem implements Runnable {
      *
      * @param newState The new state to transition to.
      */
-    public void setState(DroneState newState) {
-        this.state = newState;
+    public void setState(DroneState newState){
+        info.setState(newState);
     }
 
 
@@ -95,8 +100,8 @@ public class DroneSubsystem implements Runnable {
      *
      * @return the zone ID
      */
-    public int getZoneID() {
-        return zoneID;
+    public int getZoneID(){
+        return info.getZoneID();
     }
 
 
@@ -105,8 +110,8 @@ public class DroneSubsystem implements Runnable {
      *
      * @param zoneID the new zone ID
      */
-    public void setZoneID(int zoneID) {
-        this.zoneID = zoneID;
+    public void setZoneID(int zoneID){
+        info.setZoneID(zoneID);
     }
 
 
@@ -116,7 +121,7 @@ public class DroneSubsystem implements Runnable {
      * @return the coordinates as a {@code Point2D} object
      */
     public Point2D getCoordinates() {
-        return coordinates;
+        return info.getCoordinates();
     }
 
 
@@ -126,7 +131,7 @@ public class DroneSubsystem implements Runnable {
      * @param coordinates the new coordinates of the drone
      */
     public void setCoordinates(Point2D coordinates) {
-        this.coordinates = coordinates;
+        info.setCoordinates(coordinates);
     }
 
 
@@ -136,7 +141,7 @@ public class DroneSubsystem implements Runnable {
      * @return the flight time in minutes
      */
     public double getFlightTime() {
-        return flightTime;
+        return info.getFlightTime();
     }
 
 
@@ -146,7 +151,7 @@ public class DroneSubsystem implements Runnable {
      * @param flightTime the new flight time in minutes
      */
     public void setFlightTime(double flightTime) {
-        this.flightTime = flightTime;
+        info.setFlightTime(flightTime);
     }
 
 
@@ -156,7 +161,7 @@ public class DroneSubsystem implements Runnable {
      * @return the water level in percentage
      */
     public int getWaterLevel() {
-        return waterLevel;
+        return info.getWaterLevel();
     }
 
 
@@ -166,8 +171,28 @@ public class DroneSubsystem implements Runnable {
      * @param waterLevel the new water level in percentage
      */
     public void setWaterLevel(int waterLevel) {
-        this.waterLevel = waterLevel;
+        info.setWaterLevel(waterLevel);
     }
+
+
+    /**
+     * Gets the running status of the drone.
+     *
+     * @return the running status
+     */
+    public boolean getRunning(){
+        return info.getRunning();
+    }
+
+    /**
+     * Sets the running status of the drone.
+     *
+     * @param running the new running status
+     */
+    public void setRunning(boolean running){
+        info.setRunning(running);
+    }
+
 
     /**
      * Calculates the estimated flight time required to travel between two coordinates.
@@ -182,7 +207,6 @@ public class DroneSubsystem implements Runnable {
     }
 
 
-
     /**
      * Starts the drone subsystem, continuously listening for new incident events.
      * The subsystem processes received events and dispatches responses accordingly.
@@ -190,10 +214,10 @@ public class DroneSubsystem implements Runnable {
      */
     @Override
     public void run() {
-        this.running = true;
-        while (this.running) {
+        setRunning(true);
+        while (getRunning()) {
             Event event = receiveEventManager.get();
-            state.handleEvent(this, event);
+            getState().handleEvent(this, event);
         }
     }
 
@@ -205,7 +229,7 @@ public class DroneSubsystem implements Runnable {
     @Override
     public String toString() {
         return String.format("DroneState[zoneID=%d, coordinates=(%.2f, %.2f), flightTime=%.2f, waterLevel=%d%%]",
-                zoneID, coordinates.getX(), coordinates.getY(), flightTime, waterLevel);
+                getZoneID(), getCoordinates().getX(), getCoordinates().getY(), getFlightTime(), getWaterLevel());
     }
 
 }

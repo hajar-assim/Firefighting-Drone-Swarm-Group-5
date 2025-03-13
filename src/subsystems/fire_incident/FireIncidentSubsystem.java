@@ -152,14 +152,10 @@ public class FireIncidentSubsystem {
      */
     private void waitForFiresToBeExtinguished() {
         while (!activeFires.isEmpty()) {
-            try{
-                IncidentEvent event = (IncidentEvent) receiveSocket.receive();
+            IncidentEvent event = (IncidentEvent) receiveSocket.receive();
 
-                if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
-                    removeFire(event.getZoneID());
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
+                removeFire(event.getZoneID());
             }
         }
     }
