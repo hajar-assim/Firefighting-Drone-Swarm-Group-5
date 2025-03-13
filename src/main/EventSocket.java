@@ -5,13 +5,11 @@ import java.net.*;
 import java.io.*;
 
 public class EventSocket {
-    private DatagramSocket receiveSocket;
-    private DatagramSocket sendSocket;
+    private DatagramSocket socket;
 
     public EventSocket(){
         try{
-            receiveSocket = new DatagramSocket();
-            sendSocket = new DatagramSocket();
+            socket = new DatagramSocket();
         } catch (SocketException e) {
             throw new RuntimeException(e);
         }
@@ -26,14 +24,14 @@ public class EventSocket {
 
         DatagramPacket packet = new DatagramPacket(msg, msg.length, address, port);
 
-        sendSocket.send(packet);
+        socket.send(packet);
     }
 
     public Event receive() throws IOException, ClassNotFoundException {
         byte data[] = new byte[100];
         DatagramPacket packet = new DatagramPacket(data, data.length);
 
-        receiveSocket.receive(packet);
+        socket.receive(packet);
 
         // Deserialize object
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
