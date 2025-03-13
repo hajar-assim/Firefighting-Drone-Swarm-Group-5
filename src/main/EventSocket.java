@@ -40,7 +40,7 @@ public class EventSocket {
     }
 
     public Event receive() {
-        byte data[] = new byte[100];
+        byte data[] = new byte[1000];
         DatagramPacket packet = new DatagramPacket(data, data.length);
 
         Event event = null;

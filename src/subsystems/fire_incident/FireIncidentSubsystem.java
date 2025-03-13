@@ -39,7 +39,7 @@ public class FireIncidentSubsystem {
      */
     public FireIncidentSubsystem(String inputFolderPath, InetAddress schedulerAddress, int schedulerPort) {
         this.sendSocket = new EventSocket();
-        this.receiveSocket = new EventSocket();
+        this.receiveSocket = new EventSocket(7000);
         this.schedulerAddress = schedulerAddress;
         this.schedulerPort = schedulerPort;
         this.INPUT_FOLDER = inputFolderPath;
@@ -180,8 +180,8 @@ public class FireIncidentSubsystem {
             e.printStackTrace();
             System.exit(1);
         }
-        FireIncidentSubsystem fireIncidentSubsystem = new FireIncidentSubsystem("data", address, 5000);
 
+        FireIncidentSubsystem fireIncidentSubsystem = new FireIncidentSubsystem("data", address, 5000);
         fireIncidentSubsystem.run();
     }
 

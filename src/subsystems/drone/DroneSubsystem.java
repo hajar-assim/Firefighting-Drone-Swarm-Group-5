@@ -6,13 +6,14 @@ import subsystems.drone.states.DroneState;
 
 import java.awt.geom.Point2D;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * The {@code DroneSubsystem} class represents a drone unit that responds to incident events.
  * It continuously listens for new events from the receive event queue, processes them,
  * and dispatches responses to the send event queue.
  */
-public class DroneSubsystem implements Runnable {
+public class DroneSubsystem {
     private EventSocket sendSocket;
     private EventSocket receiveSocket;
     private InetAddress schedulerAddress;
@@ -27,9 +28,11 @@ public class DroneSubsystem implements Runnable {
      * @param schedulerPort The port of the scheduler to send events to
      */
     public DroneSubsystem(InetAddress schedulerAddress, int schedulerPort) {
+        info = new DroneInfo();
+        sendSocket = new EventSocket();
+        receiveSocket = new EventSocket(6000 + info.getDroneID());
         this.schedulerAddress = schedulerAddress;
         this.schedulerPort = schedulerPort;
-        info = new DroneInfo();
     }
 
     /**
@@ -220,7 +223,6 @@ public class DroneSubsystem implements Runnable {
      * The subsystem processes received events and dispatches responses accordingly.
      * If an "EVENTS_DONE" event is received, the subsystem shuts down.
      */
-    @Override
     public void run() {
         setRunning(true);
         while (getRunning()) {
@@ -238,6 +240,19 @@ public class DroneSubsystem implements Runnable {
     public String toString() {
         return String.format("DroneState[zoneID=%d, coordinates=(%.2f, %.2f), flightTime=%.2f, waterLevel=%d%%]",
                 getZoneID(), getCoordinates().getX(), getCoordinates().getY(), getFlightTime(), getWaterLevel());
+    }
+
+    public static void main(String args[]) {
+        InetAddress address = null;
+        try{
+            address = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        DroneSubsystem drone = new DroneSubsystem(address, 5000);
+        drone.run();
     }
 
 }
