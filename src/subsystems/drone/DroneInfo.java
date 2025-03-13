@@ -37,7 +37,6 @@ public class DroneInfo implements Serializable {
         return droneID;
     }
 
-
     /**
      * Returns the current state of the drone.
      *
@@ -56,7 +55,6 @@ public class DroneInfo implements Serializable {
         this.state = newState;
     }
 
-
     /**
      * Gets the ID of the zone where the drone is located.
      *
@@ -65,7 +63,6 @@ public class DroneInfo implements Serializable {
     public int getZoneID() {
         return zoneID;
     }
-
 
     /**
      * Sets the ID of the zone where the drone is located.
@@ -76,7 +73,6 @@ public class DroneInfo implements Serializable {
         this.zoneID = zoneID;
     }
 
-
     /**
      * Gets the current coordinates of the drone.
      *
@@ -85,7 +81,6 @@ public class DroneInfo implements Serializable {
     public Point2D getCoordinates() {
         return coordinates;
     }
-
 
     /**
      * Sets the current coordinates of the drone.
@@ -96,7 +91,6 @@ public class DroneInfo implements Serializable {
         this.coordinates = coordinates;
     }
 
-
     /**
      * Gets the total flight time of the drone.
      *
@@ -105,7 +99,6 @@ public class DroneInfo implements Serializable {
     public double getFlightTime() {
         return flightTime;
     }
-
 
     /**
      * Sets the total flight time of the drone.
@@ -116,7 +109,6 @@ public class DroneInfo implements Serializable {
         this.flightTime = flightTime;
     }
 
-
     /**
      * Gets the remaining water level in the drone.
      *
@@ -126,7 +118,6 @@ public class DroneInfo implements Serializable {
         return waterLevel;
     }
 
-
     /**
      * Sets the remaining water level in the drone.
      *
@@ -135,7 +126,6 @@ public class DroneInfo implements Serializable {
     public void setWaterLevel(int waterLevel) {
         this.waterLevel = waterLevel;
     }
-
 
     /**
      * Gets the running status of the drone.

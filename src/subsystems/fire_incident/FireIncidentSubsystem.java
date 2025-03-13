@@ -34,6 +34,8 @@ public class FireIncidentSubsystem {
      * Constructs a FireIncidentSubsystem.
      *
      * @param inputFolderPath The path to input folder.
+     * @param schedulerAddress The IP address of the scheduler to send events to
+     * @param schedulerPort The port of the scheduler to send events to
      */
     public FireIncidentSubsystem(String inputFolderPath, InetAddress schedulerAddress, int schedulerPort) {
         this.sendSocket = new EventSocket();
