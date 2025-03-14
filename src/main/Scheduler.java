@@ -2,6 +2,7 @@ package main;
 
 import subsystems.Event;
 import subsystems.EventType;
+import subsystems.drone.DroneInfo;
 import subsystems.drone.DroneSubsystem;
 import subsystems.drone.events.*;
 import subsystems.drone.states.DroneState;
@@ -11,62 +12,46 @@ import subsystems.fire_incident.events.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
 
 import java.awt.geom.Point2D;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Scheduler implements Runnable {
+public class Scheduler {
     public static int sleepMultiplier = 1000; // adjust to speed up or slow down (more accurate) the run --> original value = 1000
-    private EventQueueManager receiveEventManager;
-    private EventQueueManager fireIncidentManager;
+    private EventSocket sendSocket;
+    private EventSocket receiveSocket;
     private IncidentEvent unassignedTask = null;
     private HashMap<Integer, Point2D> fireZones; // Stores fire zone coordinates (zoneID, center)
     private HashMap<Integer, Integer> fireIncidents; // Tracks required water for each fire incident (zoneID, liters needed)
     private HashMap<Integer, Integer> droneAssignments; // Tracks which drone is assigned to which fire (droneID, zoneID)
-    private Map<Integer, DroneSubsystem> dronesByID;
+    private InetAddress fireSubsystemAddress;
+    private int fireSubsystemPort;
+    private Map<Integer, DroneInfo> dronesInfo;
+    private Map<Integer, InetAddress> droneAddresses;
+    private Map<Integer, Integer> dronePorts;
     private volatile boolean running = true;
 
     /**
      * Constructor initializes event managers and HashMaps.
-     *
-     * @param receiveEventManager The event manager for receiving events.
-     * @param fireIncidentManager The event manager for fire incident events.
-     * @param drones A map of drone IDs to their corresponding state and event manager.
      */
-    public Scheduler(EventQueueManager receiveEventManager, EventQueueManager fireIncidentManager, Map<Integer, DroneSubsystem> drones) {
-        this.receiveEventManager = receiveEventManager;
-        this.fireIncidentManager = fireIncidentManager;
+    public Scheduler(InetAddress fireSubsystemAddress, int fireSubsystemPort, Map<Integer, DroneInfo> dronesInfo, Map<Integer, InetAddress> droneAddresses, Map<Integer, Integer> dronePorts) {
+        this.sendSocket = new EventSocket();
+        this.receiveSocket = new EventSocket(5000);
         this.fireZones = new HashMap<>();
         this.fireIncidents = new HashMap<>();
         this.droneAssignments = new HashMap<>();
-        this.dronesByID = drones;
+        this.fireSubsystemAddress = fireSubsystemAddress;
+        this.fireSubsystemPort = fireSubsystemPort;
+        this.dronesInfo = dronesInfo;
+        this.droneAddresses = droneAddresses;
+        this.dronePorts = dronePorts;
     }
 
-    /**
-     * Gets the event manager for a specific drone.
-     *
-     * @param droneID The unique ID of the drone.
-     * @return The EventQueueManager for the specified drone.
-     */
-    private EventQueueManager getDroneManager(int droneID){
-        DroneSubsystem drone = this.dronesByID.get(droneID);
-        return (drone != null) ? drone.getRecieveEventManager() : null;
-    }
-
-    /**
-     * Gets the state of a specific drone.
-     *
-     * @param droneID The unique ID of the drone.
-     * @return The DroneState for the specified drone.
-     */
-    private DroneState getDroneState(int droneID) {
-        DroneSubsystem drone = this.dronesByID.get(droneID);
-        return (drone != null) ? drone.getState() : null;
-    }
     /**
      * Continuously listens for incoming events and processes them.
      * It assigns tasks, handles events, and manages drone dispatches.
      */
-    @Override
     public void run() {
         while (running) {
             try {
@@ -76,7 +61,7 @@ public class Scheduler implements Runnable {
                 }
 
                 // Retrieve an event from the queue
-                Event message = receiveEventManager.get();
+                Event message = receiveSocket.receive();
 
                 // Handle event based on its type
                 if (message instanceof ZoneEvent zoneEvent) {
@@ -93,6 +78,17 @@ public class Scheduler implements Runnable {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void sendToDrone(Event event, int droneID){
+        InetAddress address = droneAddresses.get(droneID);
+        Integer port = dronePorts.get(droneID);
+
+        if (address != null && port != null) {
+            sendSocket.send(event, address, port);
+        } else {
+            System.err.println("[ERROR] Address not found for drone ID: " + droneID);
         }
     }
 
@@ -123,13 +119,8 @@ public class Scheduler implements Runnable {
             System.out.println("\n[SCHEDULER] Received EVENTS_DONE.");
             DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0));
 
-            for (int droneID : this.dronesByID.keySet()) {
-                EventQueueManager manager = this.getDroneManager(droneID);
-                if (manager != null) {
-                    manager.put(dispatchToBase);
-                } else {
-                    System.err.println("[ERROR] EventQueueManager not found for drone ID: " + droneID);
-                }
+            for (int droneID : this.droneAddresses.keySet()) {
+                sendToDrone(dispatchToBase, droneID);
             }
             running = false;
             return;
@@ -155,7 +146,7 @@ public class Scheduler implements Runnable {
             }
 
             event.setEventType(EventType.DRONE_DISPATCHED);
-            fireIncidentManager.put(event);
+            sendSocket.send(event, fireSubsystemAddress, fireSubsystemPort);
         } else {
             System.out.println("[SCHEDULER] No drone available. Storing task for later assignment.");
             unassignedTask = event;
@@ -181,7 +172,7 @@ public class Scheduler implements Runnable {
         if (assigned) {
             System.out.println("[SCHEDULER] Assigned drone to waiting fire at Zone " + unassignedTask.getZoneID());
             unassignedTask.setEventType(EventType.DRONE_DISPATCHED);
-            fireIncidentManager.put(unassignedTask);
+            sendSocket.send(unassignedTask, fireSubsystemAddress, fireSubsystemPort);
             unassignedTask = null;
             return true;
         }
@@ -213,12 +204,7 @@ public class Scheduler implements Runnable {
                 fireZoneCenter.getY()
         );
 
-        EventQueueManager manager = this.getDroneManager(droneID);
-        if (manager != null) {
-            manager.put(dispatchEvent);
-        } else {
-            System.err.println("[ERROR] EventQueueManager not found for drone ID: " + droneID);
-        }
+        sendToDrone(dispatchEvent, droneID);
 
         // track drone assignment
         droneAssignments.put(droneID, zoneID);
@@ -247,8 +233,8 @@ public class Scheduler implements Runnable {
      * @return The ID of the available drone, or -1 if no drone is available.
      */
     private int findAvailableDrone(Point2D fireZoneCenter) {
-        for (int droneID : this.dronesByID.keySet()) {
-            DroneState droneState = this.getDroneState(droneID);
+        for (int droneID : dronesInfo.keySet()) {
+            DroneState droneState = dronesInfo.get(droneID).getState();
 
             if (droneState == null) {
                 continue; // skip drones without a valid state
@@ -286,12 +272,12 @@ public class Scheduler implements Runnable {
         }
 
         // calculate how much water to drop
-        int waterToDrop = Math.min(fireIncidents.get(zoneID), dronesByID.get(droneID).getWaterLevel());
+        int waterToDrop = Math.min(fireIncidents.get(zoneID), dronesInfo.get(droneID).getWaterLevel());
         System.out.println("[SCHEDULER] Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + zoneID);
 
         // send drop event to drone
         DropAgentEvent dropEvent = new DropAgentEvent(waterToDrop);
-        this.getDroneManager(droneID).put(dropEvent);
+        sendToDrone(dropEvent,droneID);
     }
 
     /**
@@ -319,7 +305,7 @@ public class Scheduler implements Runnable {
             droneAssignments.remove(droneID);
             // notify FireIncidentSubSystem that the fire has been put out
             IncidentEvent fireOutEvent = new IncidentEvent("", zoneID, EventType.FIRE_EXTINGUISHED, Severity.NONE);
-            fireIncidentManager.put(fireOutEvent);
+            sendSocket.send(fireOutEvent, fireSubsystemAddress, fireSubsystemPort);
         } else {
             // Otherwise update remaining water and assign another drone to zone
             fireIncidents.put(zoneID, remainingWater);
@@ -338,7 +324,7 @@ public class Scheduler implements Runnable {
 
         // retrieve necessary drone data
         int droneID = event.getDroneID();
-        DroneSubsystem drone = dronesByID.get(droneID);
+        DroneInfo drone = dronesInfo.get(droneID);
         if (drone == null) {
             System.out.println("[SCHEDULER] Error: Received update for unknown drone ID " + droneID);
             return;
@@ -375,10 +361,33 @@ public class Scheduler implements Runnable {
 
                 if (assigned) {
                     unassignedTask.setEventType(EventType.DRONE_DISPATCHED);
-                    fireIncidentManager.put(unassignedTask);
+                    sendSocket.send(unassignedTask, fireSubsystemAddress, fireSubsystemPort);
                     unassignedTask = null;
                 }
             }
         }
+    }
+
+    public static void main(String args[]) {
+        InetAddress address = null;
+        try{
+            address = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        Map<Integer, DroneInfo> dronesInfo = new HashMap<>();
+        Map<Integer, InetAddress> droneAddresses = new HashMap<>();
+        Map<Integer, Integer> dronePorts = new HashMap<>();
+
+        for(int i = 1; i <= 1; i++){
+            dronesInfo.put(i, new DroneInfo());
+            droneAddresses.put(i, address);
+            dronePorts.put(i, 6000 + i);
+        }
+
+        Scheduler scheduler = new Scheduler(address, 7000, dronesInfo, droneAddresses, dronePorts);
+        scheduler.run();
     }
 }

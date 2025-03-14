@@ -60,7 +60,7 @@ public class OnRouteState implements DroneState {
         if (! returningToBase) {
             // send arrivedEvent to the Schedule to receive further instructions
             DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(drone.getDroneID(), dispatchEvent.getZoneID());
-            drone.getSendEventManager().put(arrivedEvent);
+            drone.getSendSocket().send(arrivedEvent, drone.getSchedulerAddress(), drone.getSchedulerPort());
         }else{
             refill(drone);
         }
@@ -85,6 +85,6 @@ public class OnRouteState implements DroneState {
 
         // notify the scheduler that the drone is ready
         DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(drone.getDroneID(), idleState);
-        drone.getSendEventManager().put(droneUpdateEvent);
+        drone.getSendSocket().send(droneUpdateEvent, drone.getSchedulerAddress(), drone.getSchedulerPort());
     }
 }

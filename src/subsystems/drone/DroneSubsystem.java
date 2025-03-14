@@ -1,47 +1,38 @@
 package subsystems.drone;
 
-import main.EventQueueManager;
+import main.EventSocket;
 import subsystems.Event;
 import subsystems.drone.states.DroneState;
-import subsystems.drone.states.IdleState;
-import subsystems.fire_incident.FireIncidentSubsystem;
 
 import java.awt.geom.Point2D;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * The {@code DroneSubsystem} class represents a drone unit that responds to incident events.
  * It continuously listens for new events from the receive event queue, processes them,
  * and dispatches responses to the send event queue.
  */
-public class DroneSubsystem implements Runnable {
-    private static final AtomicInteger nextId = new AtomicInteger(1);
-    private EventQueueManager sendEventManager;
-    private EventQueueManager receiveEventManager;
-    private final int droneID;
-    private DroneState state;
-    private volatile boolean running;
-    private int zoneID;
-    private Point2D coordinates;
-    private double flightTime;
-    private int waterLevel;
+public class DroneSubsystem {
+    private EventSocket sendSocket;
+    private EventSocket receiveSocket;
+    private InetAddress schedulerAddress;
+    private int schedulerPort;
+    DroneInfo info;
+
 
     /**
      * Constructs a {@code DroneSubsystem} with the specified event managers.
      *
-     * @param receiveEventManager The event queue manager from which the subsystem receives incident events.
-     * @param sendEventManager    The event queue manager to which the subsystem sends processed events.
+     * @param schedulerAddress The IP address of the scheduler to send events to
+     * @param schedulerPort The port of the scheduler to send events to
      */
-    public DroneSubsystem(EventQueueManager receiveEventManager, EventQueueManager sendEventManager) {
-        this.receiveEventManager = receiveEventManager;
-        this.sendEventManager = sendEventManager;
-        this.droneID = nextId.getAndIncrement();
-        this.state = new IdleState();
-        this.running = false;
-        this.zoneID = 0;
-        this.coordinates = FireIncidentSubsystem.BASE_COORDINATES;
-        this.flightTime = 10 * 60;
-        this.waterLevel = 15;
+    public DroneSubsystem(InetAddress schedulerAddress, int schedulerPort) {
+        info = new DroneInfo();
+        sendSocket = new EventSocket();
+        receiveSocket = new EventSocket(6000 + info.getDroneID());
+        this.schedulerAddress = schedulerAddress;
+        this.schedulerPort = schedulerPort;
     }
 
     /**
@@ -49,26 +40,62 @@ public class DroneSubsystem implements Runnable {
      *
      * @return The drone ID.
      */
-    public int getDroneID() {
-        return droneID;
+    public int getDroneID(){
+        return info.getDroneID();
     }
 
     /**
-     * Returns the receiving queue manager of the drone.
+     * Returns the receiving socket of the drone.
      *
-     * @return The EventQueueManager.
+     * @return The EventSocket.
      */
-    public EventQueueManager getRecieveEventManager(){
-        return this.receiveEventManager;
+    public EventSocket getRecieveSocket(){
+        return this.receiveSocket;
     }
 
     /**
-     * Returns the sending queue manager of the drone.
+     * Returns the sending socket of the drone.
      *
-     * @return The EventQueueManager.
+     * @return The EventSocket.
      */
-    public EventQueueManager getSendEventManager(){
-        return this.sendEventManager;
+    public EventSocket getSendSocket(){
+        return this.sendSocket;
+    }
+
+    /**
+     * Returns the IP address of the scheduler.
+     *
+     * @return The IP address of the scheduler.
+     */
+    public InetAddress getSchedulerAddress() {
+        return schedulerAddress;
+    }
+
+    /**
+     * Returns the port of the scheduler.
+     *
+     * @return The port of the scheduler.
+     */
+    public int getSchedulerPort() {
+        return schedulerPort;
+    }
+
+    /**
+     * Returns the info of the drone.
+     *
+     * @return The drone info.
+     */
+    public DroneInfo getDroneInfo(){
+        return info;
+    }
+
+    /**
+     * Sets the current info of the drone.
+     *
+     * @param info the new info of the drone
+     */
+    public void setDroneInfo(DroneInfo info){
+        this.info = info;
     }
 
     /**
@@ -76,8 +103,8 @@ public class DroneSubsystem implements Runnable {
      *
      * @return The drone's state.
      */
-    public DroneState getState() {
-        return this.state;
+    public DroneState getState(){
+        return info.getState();
     }
 
     /**
@@ -85,30 +112,27 @@ public class DroneSubsystem implements Runnable {
      *
      * @param newState The new state to transition to.
      */
-    public void setState(DroneState newState) {
-        this.state = newState;
+    public void setState(DroneState newState){
+        info.setState(newState);
     }
-
 
     /**
      * Gets the ID of the zone where the drone is located.
      *
      * @return the zone ID
      */
-    public int getZoneID() {
-        return zoneID;
+    public int getZoneID(){
+        return info.getZoneID();
     }
-
 
     /**
      * Sets the ID of the zone where the drone is located.
      *
      * @param zoneID the new zone ID
      */
-    public void setZoneID(int zoneID) {
-        this.zoneID = zoneID;
+    public void setZoneID(int zoneID){
+        info.setZoneID(zoneID);
     }
-
 
     /**
      * Gets the current coordinates of the drone.
@@ -116,9 +140,8 @@ public class DroneSubsystem implements Runnable {
      * @return the coordinates as a {@code Point2D} object
      */
     public Point2D getCoordinates() {
-        return coordinates;
+        return info.getCoordinates();
     }
-
 
     /**
      * Sets the current coordinates of the drone.
@@ -126,9 +149,8 @@ public class DroneSubsystem implements Runnable {
      * @param coordinates the new coordinates of the drone
      */
     public void setCoordinates(Point2D coordinates) {
-        this.coordinates = coordinates;
+        info.setCoordinates(coordinates);
     }
-
 
     /**
      * Gets the total flight time of the drone.
@@ -136,9 +158,8 @@ public class DroneSubsystem implements Runnable {
      * @return the flight time in minutes
      */
     public double getFlightTime() {
-        return flightTime;
+        return info.getFlightTime();
     }
-
 
     /**
      * Sets the total flight time of the drone.
@@ -146,9 +167,8 @@ public class DroneSubsystem implements Runnable {
      * @param flightTime the new flight time in minutes
      */
     public void setFlightTime(double flightTime) {
-        this.flightTime = flightTime;
+        info.setFlightTime(flightTime);
     }
-
 
     /**
      * Gets the remaining water level in the drone.
@@ -156,9 +176,8 @@ public class DroneSubsystem implements Runnable {
      * @return the water level in percentage
      */
     public int getWaterLevel() {
-        return waterLevel;
+        return info.getWaterLevel();
     }
-
 
     /**
      * Sets the remaining water level in the drone.
@@ -166,7 +185,25 @@ public class DroneSubsystem implements Runnable {
      * @param waterLevel the new water level in percentage
      */
     public void setWaterLevel(int waterLevel) {
-        this.waterLevel = waterLevel;
+        info.setWaterLevel(waterLevel);
+    }
+
+    /**
+     * Gets the running status of the drone.
+     *
+     * @return the running status
+     */
+    public boolean getRunning(){
+        return info.getRunning();
+    }
+
+    /**
+     * Sets the running status of the drone.
+     *
+     * @param running the new running status
+     */
+    public void setRunning(boolean running){
+        info.setRunning(running);
     }
 
     /**
@@ -181,19 +218,16 @@ public class DroneSubsystem implements Runnable {
         return ((distance - 46.875) / 15 + 6.25);
     }
 
-
-
     /**
      * Starts the drone subsystem, continuously listening for new incident events.
      * The subsystem processes received events and dispatches responses accordingly.
      * If an "EVENTS_DONE" event is received, the subsystem shuts down.
      */
-    @Override
     public void run() {
-        this.running = true;
-        while (this.running) {
-            Event event = receiveEventManager.get();
-            state.handleEvent(this, event);
+        setRunning(true);
+        while (getRunning()) {
+            Event event = receiveSocket.receive();
+            getState().handleEvent(this, event);
         }
     }
 
@@ -205,7 +239,20 @@ public class DroneSubsystem implements Runnable {
     @Override
     public String toString() {
         return String.format("DroneState[zoneID=%d, coordinates=(%.2f, %.2f), flightTime=%.2f, waterLevel=%d%%]",
-                zoneID, coordinates.getX(), coordinates.getY(), flightTime, waterLevel);
+                getZoneID(), getCoordinates().getX(), getCoordinates().getY(), getFlightTime(), getWaterLevel());
+    }
+
+    public static void main(String args[]) {
+        InetAddress address = null;
+        try{
+            address = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        DroneSubsystem drone = new DroneSubsystem(address, 5000);
+        drone.run();
     }
 
 }

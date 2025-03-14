@@ -38,7 +38,7 @@ public class DroppingAgentState implements DroneState {
         System.out.println("[DRONE " + drone.getDroneID() + "] Dropped " + event.getVolume() + " liters.");
 
         // notify system that agent was dropped
-        drone.getSendEventManager().put(new DropAgentEvent(event.getVolume(), drone.getDroneID()));
+        drone.getSendSocket().send(new DropAgentEvent(event.getVolume(), drone.getDroneID()), drone.getSchedulerAddress(), drone.getSchedulerPort());
 
         // transition to On route and Refill
         System.out.println("[DRONE " + drone.getDroneID() + "] Returning to base to refill.");

@@ -1,15 +1,17 @@
 package subsystems.fire_incident;
 
+import main.EventSocket;
 import subsystems.EventType;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.events.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
-import main.EventQueueManager;
 
 import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashSet;
 
 /**
@@ -17,25 +19,29 @@ import java.util.HashSet;
  * It reads input files containing fire incident events and zone data, then adds incidents
  * to the EventQueueManager.
  */
-public class FireIncidentSubsystem implements Runnable {
+public class FireIncidentSubsystem {
     public static Point2D BASE_COORDINATES = new Point2D.Double(0,0);
     private final String INPUT_FOLDER;
     private File eventFile;
     private File zoneFile;
-    private EventQueueManager receiveEventManager;
-    private EventQueueManager sendEventManager;
+    private EventSocket sendSocket;
+    private EventSocket receiveSocket;
+    private InetAddress schedulerAddress;
+    private int schedulerPort;
     private HashSet<Integer> activeFires = new HashSet<>();
 
     /**
      * Constructs a FireIncidentSubsystem.
      *
-     * @param receiveEventManager The queue manager responsible for handling received events.
-     * @param sendEventManager The queue manager responsible for sending events.
      * @param inputFolderPath The path to input folder.
+     * @param schedulerAddress The IP address of the scheduler to send events to
+     * @param schedulerPort The port of the scheduler to send events to
      */
-    public FireIncidentSubsystem(EventQueueManager receiveEventManager, EventQueueManager sendEventManager, String inputFolderPath) {
-        this.receiveEventManager = receiveEventManager;
-        this.sendEventManager = sendEventManager;
+    public FireIncidentSubsystem(String inputFolderPath, InetAddress schedulerAddress, int schedulerPort) {
+        this.sendSocket = new EventSocket();
+        this.receiveSocket = new EventSocket(7000);
+        this.schedulerAddress = schedulerAddress;
+        this.schedulerPort = schedulerPort;
         this.INPUT_FOLDER = inputFolderPath;
         this.getInputFiles();
     }
@@ -76,10 +82,10 @@ public class FireIncidentSubsystem implements Runnable {
 
                 IncidentEvent incident = new IncidentEvent(parts[0], zoneId, EventType.fromString(parts[2]), Severity.fromString(parts[3]));
                 System.out.println("\n[FIRE INCIDENT SYSTEM] New incident detected: {" + incident + "}");
-                sendEventManager.put(incident);
+                sendSocket.send(incident, schedulerAddress, schedulerPort);
                 activeFires.add(zoneId);
 
-                IncidentEvent event = (IncidentEvent) receiveEventManager.get();
+                IncidentEvent event = (IncidentEvent) receiveSocket.receive();
                 System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
 
                 while(event.getEventType() != EventType.DRONE_DISPATCHED){
@@ -87,7 +93,7 @@ public class FireIncidentSubsystem implements Runnable {
                     if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                         removeFire(event.getZoneID());
                     }
-                    event = (IncidentEvent) receiveEventManager.get();
+                    event = (IncidentEvent) receiveSocket.receive();
                     System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
                 }
             }
@@ -98,7 +104,7 @@ public class FireIncidentSubsystem implements Runnable {
             // only send EVENTS_DONE once all fires are extinguished
             IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE);
             System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
-            sendEventManager.put(noMoreIncidents);
+            sendSocket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -119,7 +125,7 @@ public class FireIncidentSubsystem implements Runnable {
                 String[] parts = line.split(",");
                 int zoneId = Integer.parseInt(parts[0]);
                 ZoneEvent zoneEvent = new ZoneEvent(zoneId, parts[1], parts[2]);
-                sendEventManager.put(zoneEvent);
+                sendSocket.send(zoneEvent, schedulerAddress, schedulerPort);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -148,7 +154,7 @@ public class FireIncidentSubsystem implements Runnable {
      */
     private void waitForFiresToBeExtinguished() {
         while (!activeFires.isEmpty()) {
-            IncidentEvent event = (IncidentEvent) receiveEventManager.get();
+            IncidentEvent event = (IncidentEvent) receiveSocket.receive();
 
             if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                 removeFire(event.getZoneID());
@@ -161,9 +167,22 @@ public class FireIncidentSubsystem implements Runnable {
      * Runs the FireIncidentSubsystem by first parsing the zone data
      * and then processing the event file to queue incident events.
      */
-    @Override
     public void run() {
         this.parseZones();
         this.parseEvents();
     }
+
+    public static void main(String args[]) {
+        InetAddress address = null;
+        try{
+            address = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        FireIncidentSubsystem fireIncidentSubsystem = new FireIncidentSubsystem("data", address, 5000);
+        fireIncidentSubsystem.run();
+    }
+
 }

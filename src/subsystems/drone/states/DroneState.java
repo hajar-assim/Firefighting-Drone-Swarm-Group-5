@@ -5,7 +5,9 @@ import subsystems.drone.events.DropAgentEvent;
 import subsystems.Event;
 import subsystems.drone.DroneSubsystem;
 
-public interface DroneState {
+import java.io.Serializable;
+
+public interface DroneState extends Serializable {
     /**
      * Handles generic events related to drone operations.
      */
