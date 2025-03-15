@@ -4,7 +4,9 @@ import subsystems.*;
 import java.net.*;
 import java.io.*;
 
-public class EventSocket {
+public class
+
+EventSocket {
     private DatagramSocket socket;
 
     public EventSocket(){
@@ -14,6 +16,12 @@ public class EventSocket {
             throw new RuntimeException(e);
         }
     }
+    public void close() {
+        if (socket != null && !socket.isClosed()) {
+            socket.close();
+        }
+    }
+
 
     public EventSocket(int port){
         try{
