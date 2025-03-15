@@ -2,6 +2,9 @@ package subsystems.drone;
 
 import main.EventSocket;
 import subsystems.Event;
+import subsystems.drone.events.DroneArrivedEvent;
+import subsystems.drone.events.DroneUpdateEvent;
+import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.states.DroneState;
 
 import java.awt.geom.Point2D;
@@ -114,6 +117,8 @@ public class DroneSubsystem {
      */
     public void setState(DroneState newState){
         info.setState(newState);
+        DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(getDroneID(), info);
+        sendSocket.send(droneUpdateEvent, getSchedulerAddress(), getSchedulerPort());
     }
 
     /**
@@ -150,6 +155,10 @@ public class DroneSubsystem {
      */
     public void setCoordinates(Point2D coordinates) {
         info.setCoordinates(coordinates);
+        if(getZoneID() != 0){
+            DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(getDroneID(), getZoneID());
+            sendSocket.send(arrivedEvent, schedulerAddress, schedulerPort);
+        }
     }
 
     /**
@@ -182,10 +191,21 @@ public class DroneSubsystem {
     /**
      * Sets the remaining water level in the drone.
      *
-     * @param waterLevel the new water level in percentage
+     * @param waterLevel the new water level
      */
     public void setWaterLevel(int waterLevel) {
         info.setWaterLevel(waterLevel);
+    }
+
+    /**
+     * Changes the remaining water level in the drone.
+     *
+     * @param change the value to subtract to new water level
+     */
+    public void subtractWaterLevel(int change) {
+        info.setWaterLevel(info.getWaterLevel() - change);
+        DropAgentEvent dropEvent =  new DropAgentEvent(change, getDroneID());
+        sendSocket.send(dropEvent, schedulerAddress, schedulerPort);
     }
 
     /**

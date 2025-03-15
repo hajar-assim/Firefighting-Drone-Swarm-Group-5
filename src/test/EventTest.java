@@ -1,6 +1,7 @@
 package test;
 
 import org.junit.jupiter.api.*;
+import subsystems.drone.DroneInfo;
 import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneDispatchEvent;
 import subsystems.drone.events.DroneUpdateEvent;
@@ -39,11 +40,11 @@ class EventTests {
     @Test
     @DisplayName("Test DroneUpdateEvent class")
     void testDroneUpdateEvent() {
-        DroneState state = new IdleState();
-        DroneUpdateEvent event = new DroneUpdateEvent(1, state);
+        DroneInfo info = new DroneInfo();
+        DroneUpdateEvent event = new DroneUpdateEvent(1, info);
 
         assertEquals(1, event.getDroneID());
-        assertEquals(state, event.getDroneState());
+        assertEquals(info, event.getDroneInfo());
 
         assertDoesNotThrow(() -> event.fromString(""));
     }
