@@ -15,7 +15,9 @@ import java.awt.geom.Point2D;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 
 public class Scheduler {
     public static int sleepMultiplier = 1000; // adjust to speed up or slow down (more accurate) the run --> original value = 1000
@@ -31,6 +33,7 @@ public class Scheduler {
     private Map<Integer, InetAddress> droneAddresses;
     private Map<Integer, Integer> dronePorts;
     private volatile boolean running = true;
+    private Queue<IncidentEvent> unassignedIncidents;
 
     /**
      * Constructor initializes event managers and HashMaps.
@@ -46,6 +49,7 @@ public class Scheduler {
         this.dronesInfo = dronesInfo;
         this.droneAddresses = droneAddresses;
         this.dronePorts = dronePorts;
+        this.unassignedIncidents = new LinkedList<>();
     }
 
     /**
@@ -56,7 +60,7 @@ public class Scheduler {
         while (running) {
             try {
                 // attempt to assign task
-                if (unassignedTask != null) {
+                if (!unassignedIncidents.isEmpty()) {
                     attemptAssignUnassignedTask();
                 }
 
@@ -148,36 +152,50 @@ public class Scheduler {
             event.setEventType(EventType.DRONE_DISPATCHED);
             sendSocket.send(event, fireSubsystemAddress, fireSubsystemPort);
         } else {
-            System.out.println("[SCHEDULER] No drone available. Storing task for later assignment.");
-            unassignedTask = event;
+            System.out.println("[SCHEDULER] No drones available for fire at zone " + event.getZoneID() + ", added to unassigned incident buffer for assignment when drone is available");
+
+            // Add to buffer of unassigned incidents
+            unassignedIncidents.add(event);
         }
     }
 
     /**
-     * Attempts to assign an unassigned task to an available drone.
+     * Attempts to assign unassigned tasks to available drones.
      *
-     * @return true if the task is assigned, false otherwise.
+     * @return true if at least one task is assigned, false otherwise.
      */
     private boolean attemptAssignUnassignedTask() {
-        if (unassignedTask == null) return false;
+        if (unassignedIncidents.isEmpty()) {
+            return false;
+        }
 
-        // Check if there are any ongoing fires left before assigning waiting tasks
-        for (int zoneID : fireIncidents.keySet()) {
-            if (fireIncidents.get(zoneID) > 0) {
-                return false; // do not assign a new task while active fires exist
+        // Assume failure to assign until a task is assigned
+        boolean assignedTaskSuccessfully = false;
+
+        // Process tasks in the queue
+        while (!unassignedIncidents.isEmpty()) {
+            // Get next task to assign
+            IncidentEvent task = unassignedIncidents.peek();
+            // Assign drone to task if drones are available
+            boolean assigned = assignDrone(task.getZoneID());
+
+            if (assigned) {
+                System.out.println("[SCHEDULER] Assigned drone to waiting fire at Zone " + task.getZoneID());
+                task.setEventType(EventType.DRONE_DISPATCHED);
+
+                sendSocket.send(task, fireSubsystemAddress, fireSubsystemPort);
+                // Remove task from buffer
+                unassignedIncidents.poll();
+
+                assignedTaskSuccessfully = true;
+
+            } else {
+                System.out.println("[SCHEDULER] No drones available for waiting fire at zone " + task.getZoneID());
+                break;
             }
         }
 
-        boolean assigned = assignDrone(unassignedTask.getZoneID());
-        if (assigned) {
-            System.out.println("[SCHEDULER] Assigned drone to waiting fire at Zone " + unassignedTask.getZoneID());
-            unassignedTask.setEventType(EventType.DRONE_DISPATCHED);
-            sendSocket.send(unassignedTask, fireSubsystemAddress, fireSubsystemPort);
-            unassignedTask = null;
-            return true;
-        }
-
-        return false;
+        return assignedTaskSuccessfully;
     }
 
     /**
