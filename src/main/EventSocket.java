@@ -58,4 +58,9 @@ public class EventSocket {
 
         return event;
     }
+
+    // Used in Unit Tests for FireIncidentSubsystemTest cleanup
+    public void close() {
+        socket.close();
+    }
 }
