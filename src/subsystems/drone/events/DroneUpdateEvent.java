@@ -1,25 +1,25 @@
 package subsystems.drone.events;
 
 import subsystems.Event;
-import subsystems.drone.states.*;
+import subsystems.drone.DroneInfo;
 
 /**
  * Represents an event that updates the state of a specific drone.
  */
 public class DroneUpdateEvent extends Event {
     private int droneID;
-    private DroneState droneState;
+    private DroneInfo droneInfo;
 
     /**
      * Constructs a DroneUpdateEvent with the specified drone ID and state.
      *
      * @param droneID the ID of the drone being updated
-     * @param droneState the new state of the drone
+     * @param droneInfo the new info of the drone
      */
-    public DroneUpdateEvent(int droneID, DroneState droneState) {
+    public DroneUpdateEvent(int droneID, DroneInfo droneInfo) {
         super(null);
         this.droneID = droneID;
-        this.droneState = droneState;
+        this.droneInfo = droneInfo;
     }
 
 
@@ -38,8 +38,8 @@ public class DroneUpdateEvent extends Event {
      *
      * @return the drone's state as a {@code DroneState} object
      */
-    public DroneState getDroneState() {
-        return droneState;
+    public DroneInfo getDroneInfo() {
+        return droneInfo;
     }
 
 
@@ -51,7 +51,7 @@ public class DroneUpdateEvent extends Event {
     @Override
     public String toString() {
         return String.format("DroneUpdateEvent[droneID=%d, droneState=%s]",
-                droneID, droneState);
+                droneID, droneInfo);
     }
 
 

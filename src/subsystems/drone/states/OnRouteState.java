@@ -57,11 +57,7 @@ public class OnRouteState implements DroneState {
         drone.setCoordinates(targetCoords);
         System.out.println("[DRONE " + drone.getDroneID() + "] Arrived at " + onRoute);
 
-        if (! returningToBase) {
-            // send arrivedEvent to the Schedule to receive further instructions
-            DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(drone.getDroneID(), dispatchEvent.getZoneID());
-            drone.getSendSocket().send(arrivedEvent, drone.getSchedulerAddress(), drone.getSchedulerPort());
-        }else{
+        if (returningToBase) {
             refill(drone);
         }
     }
@@ -74,7 +70,7 @@ public class OnRouteState implements DroneState {
 
     private void refill(DroneSubsystem drone){
         // reset water level and flight time
-        drone.setWaterLevel(drone.getWaterLevel());
+        drone.setWaterLevel(15);
         drone.setFlightTime(10 * 60);
         System.out.println("[DRONE " + drone.getDroneID() + "] Refilled to " + drone.getWaterLevel() + " liters.");
 
@@ -82,9 +78,5 @@ public class OnRouteState implements DroneState {
         IdleState idleState = new IdleState();
         System.out.println("[DRONE " + drone.getDroneID() + "] Now idle and ready for dispatch.");
         drone.setState(idleState);
-
-        // notify the scheduler that the drone is ready
-        DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(drone.getDroneID(), idleState);
-        drone.getSendSocket().send(droneUpdateEvent, drone.getSchedulerAddress(), drone.getSchedulerPort());
     }
 }

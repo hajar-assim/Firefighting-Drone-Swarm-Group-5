@@ -30,15 +30,17 @@ public class DroppingAgentState implements DroneState {
     @Override
     public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {
         System.out.println("[DRONE " + drone.getDroneID() + "] Dropping agent...");
+
+        int volume = event.getVolume();
         try {
-            Thread.sleep((long) event.getVolume() * Scheduler.sleepMultiplier);
+            Thread.sleep((long) volume * Scheduler.sleepMultiplier);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("[DRONE " + drone.getDroneID() + "] Dropped " + event.getVolume() + " liters.");
 
-        // notify system that agent was dropped
-        drone.getSendSocket().send(new DropAgentEvent(event.getVolume(), drone.getDroneID()), drone.getSchedulerAddress(), drone.getSchedulerPort());
+        drone.subtractWaterLevel(volume);
+
+        System.out.println("[DRONE " + drone.getDroneID() + "] Dropped " + volume + " liters.");
 
         // transition to On route and Refill
         System.out.println("[DRONE " + drone.getDroneID() + "] Returning to base to refill.");

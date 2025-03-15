@@ -324,7 +324,8 @@ public class Scheduler {
 
         // retrieve necessary drone data
         int droneID = event.getDroneID();
-        DroneInfo drone = dronesInfo.get(droneID);
+        DroneInfo drone = event.getDroneInfo();
+        dronesInfo.put(droneID, drone);
         if (drone == null) {
             System.out.println("[SCHEDULER] Error: Received update for unknown drone ID " + droneID);
             return;
