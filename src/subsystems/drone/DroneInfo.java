@@ -18,6 +18,7 @@ public class DroneInfo implements Serializable {
     private int waterLevel;
 
     public DroneInfo(){
+        this.droneID = -1;
         this.state = new IdleState();
         this.running = false;
         this.zoneID = 0;

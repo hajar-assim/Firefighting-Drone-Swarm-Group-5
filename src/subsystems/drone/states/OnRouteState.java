@@ -44,7 +44,7 @@ public class OnRouteState implements DroneState {
         boolean returningToBase = dispatchEvent.getZoneID() == 0;
         String onRoute = returningToBase ? "Base" : "Zone: " + drone.getZoneID();
 
-        System.out.println("[DRONE " + drone.getDroneID() + "] On route to " + onRoute
+        System.out.println("\n[DRONE " + drone.getDroneID() + "] On route to " + onRoute
                 + " | Estimated time: " + String.format("%.2f seconds", flightTime));
 
         // simulate flight time

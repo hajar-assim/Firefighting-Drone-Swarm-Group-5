@@ -259,7 +259,7 @@ public class Scheduler {
                 continue; // skip drones without a valid state
             }
 
-            if (droneState instanceof IdleState) {
+            if (droneState instanceof IdleState && !droneAssignments.containsKey(droneID)) {
                 System.out.println("[SCHEDULER] Found available idle drone: " + droneID);
                 return droneID;
             }
@@ -401,8 +401,8 @@ public class Scheduler {
         dronePorts.put(droneID, event.getPort());
         dronesInfo.put(droneID, event.getDroneInfo());
 
-        sendSocket.send(event, event.getAddress(), event.getPort());
-        System.out.println("[SCHEDULER] Registered new drone: " + droneID);
+        this.sendToDrone(event, droneID);
+        System.out.println("\n[SCHEDULER] Registered new drone: " + droneID + ", Address: " + event.getPort() + ", Port: " + event.getPort() + "\n");
     }
 
     public static void main(String args[]) {

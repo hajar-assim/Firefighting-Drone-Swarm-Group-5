@@ -255,11 +255,13 @@ public class DroneSubsystem {
 
     private void registerWithScheduler() {
         try {
-            DroneRegistrationEvent regEvent = new DroneRegistrationEvent(this.info, InetAddress.getLocalHost(), socket.getSocket().getPort());
+            DroneRegistrationEvent regEvent = new DroneRegistrationEvent(this.info, InetAddress.getLocalHost(), socket.getSocket().getLocalPort());
             socket.send(regEvent, schedulerAddress, schedulerPort);
-            System.out.println("[DRONE " + getDroneID() + "] Sent registration to Scheduler.");
+            System.out.println("[DRONE] Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort());
 
             regEvent = (DroneRegistrationEvent) socket.receive();
+            System.out.println("[Drone received registration approval from scheduler. Assigned Drone ID " + regEvent.getDroneInfo().getDroneID() + "\n");
+
             this.setDroneInfo(regEvent.getDroneInfo());
         } catch (Exception e) {
             e.printStackTrace();
