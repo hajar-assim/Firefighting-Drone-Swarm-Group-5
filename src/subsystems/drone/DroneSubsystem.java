@@ -6,10 +6,15 @@ import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.states.DroneState;
+import subsystems.drone.states.DroppingAgentState;
+import subsystems.drone.states.IdleState;
+import subsystems.drone.states.OnRouteState;
 
 import java.awt.geom.Point2D;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The {@code DroneSubsystem} class represents a drone unit that responds to incident events.
@@ -22,6 +27,13 @@ public class DroneSubsystem {
     private InetAddress schedulerAddress;
     private int schedulerPort;
     DroneInfo info;
+    private static final Map<Class<? extends DroneState>, DroneState> stateMap = new HashMap<>();
+
+    static{
+        stateMap.put(IdleState.class, new IdleState());
+        stateMap.put(OnRouteState.class, new OnRouteState(null));
+        stateMap.put(DroppingAgentState.class, new DroppingAgentState());
+    }
 
 
     /**
