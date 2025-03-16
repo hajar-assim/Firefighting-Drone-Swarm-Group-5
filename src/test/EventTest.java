@@ -10,6 +10,8 @@ import subsystems.drone.states.DroneState;
 import subsystems.drone.states.IdleState;
 
 import java.awt.geom.Point2D;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,7 +42,13 @@ class EventTests {
     @Test
     @DisplayName("Test DroneUpdateEvent class")
     void testDroneUpdateEvent() {
-        DroneInfo info = new DroneInfo();
+        DroneInfo info = null;
+        try {
+            info = new DroneInfo(InetAddress.getLocalHost(), 2000);
+        } catch (UnknownHostException e){
+            e.printStackTrace();
+        }
+
         DroneUpdateEvent event = new DroneUpdateEvent(1, info);
 
         assertEquals(1, event.getDroneID());

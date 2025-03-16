@@ -31,8 +31,12 @@ public class DroneSubsystem {
      * @param schedulerPort The port of the scheduler to send events to
      */
     public DroneSubsystem(InetAddress schedulerAddress, int schedulerPort) {
-        info = new DroneInfo();
         socket = new EventSocket();
+        try {
+            info = new DroneInfo(InetAddress.getLocalHost(), socket.getSocket().getLocalPort());
+        } catch (UnknownHostException e) {
+            System.err.println("Unknown host being assigned to Drone.");
+        }
         this.schedulerAddress = schedulerAddress;
         this.schedulerPort = schedulerPort;
     }

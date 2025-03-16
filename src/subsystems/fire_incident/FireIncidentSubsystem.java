@@ -165,6 +165,7 @@ public class FireIncidentSubsystem {
     }
 
     public static void main(String[] args) {
+        System.out.println("[FIRE INCIDENT SYSTEM] Fire Incident System has started.");
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();

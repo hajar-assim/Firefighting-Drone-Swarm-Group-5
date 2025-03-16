@@ -30,8 +30,6 @@ public class Scheduler {
     private final InetAddress fireSubsystemAddress;
     private final int fireSubsystemPort;
     private final Map<Integer, DroneInfo> dronesInfo;
-    private final Map<Integer, InetAddress> droneAddresses;
-    private final Map<Integer, Integer> dronePorts;
     private volatile boolean running = true;
     private final Queue<IncidentEvent> unassignedIncidents;
 
@@ -46,8 +44,6 @@ public class Scheduler {
         this.fireSubsystemAddress = fireSubsystemAddress;
         this.fireSubsystemPort = fireSubsystemPort;
         this.dronesInfo = new HashMap<>();
-        this.droneAddresses = new HashMap<>();
-        this.dronePorts = new HashMap<>();
         this.unassignedIncidents = new LinkedList<>();
     }
 
@@ -90,8 +86,8 @@ public class Scheduler {
     }
 
     private void sendToDrone(Event event, int droneID){
-        InetAddress address = droneAddresses.get(droneID);
-        Integer port = dronePorts.get(droneID);
+        InetAddress address = dronesInfo.get(droneID).getAddress();
+        Integer port = dronesInfo.get(droneID).getPort();
 
         if (address != null && port != null) {
             sendSocket.send(event, address, port);
@@ -127,7 +123,7 @@ public class Scheduler {
             System.out.println("\n[SCHEDULER] Received EVENTS_DONE.");
             DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0));
 
-            for (int droneID : this.droneAddresses.keySet()) {
+            for (int droneID : this.dronesInfo.keySet()) {
                 sendToDrone(dispatchToBase, droneID);
             }
             running = false;
@@ -334,8 +330,6 @@ public class Scheduler {
         int droneID = nextDroneId.getAndIncrement();
         event.getDroneInfo().setDroneID(droneID);
 
-        droneAddresses.put(droneID, event.getAddress());
-        dronePorts.put(droneID, event.getPort());
         dronesInfo.put(droneID, event.getDroneInfo());
 
         this.sendToDrone(event, droneID);
@@ -343,6 +337,8 @@ public class Scheduler {
     }
 
     public static void main(String[] args) {
+        System.out.println("======== FIREFIGHTING DRONE SWARM ========");
+        System.out.println("[SCHEDULER] Scheduler has started.");
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();
