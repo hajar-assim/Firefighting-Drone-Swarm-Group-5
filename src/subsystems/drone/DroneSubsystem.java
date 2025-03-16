@@ -3,7 +3,6 @@ package subsystems.drone;
 import main.EventSocket;
 import subsystems.Event;
 import subsystems.drone.events.DroneArrivedEvent;
-import subsystems.drone.events.DroneRegistrationEvent;
 import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.states.DroneState;
@@ -14,7 +13,7 @@ import java.net.UnknownHostException;
 
 /**
  * The {@code DroneSubsystem} class represents a drone unit that responds to incident events.
- * It continuously listens for new events from the receive event queue, processes them,
+ * It continuously listens for new events from the recieve event queue, processes them,
  * and dispatches responses to the send event queue.
  */
 public class DroneSubsystem {
@@ -261,16 +260,16 @@ public class DroneSubsystem {
 
     private void registerWithScheduler() {
         try {
-            DroneRegistrationEvent regEvent = new DroneRegistrationEvent(this.info, InetAddress.getLocalHost(), socket.getSocket().getLocalPort());
-            socket.send(regEvent, schedulerAddress, schedulerPort);
+            DroneUpdateEvent event = new DroneUpdateEvent(-1, this.info);
+            socket.send(event, schedulerAddress, schedulerPort);
             System.out.println("[DRONE] Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort());
 
-            regEvent = (DroneRegistrationEvent) socket.receive();
-            System.out.println("[Drone received registration approval from scheduler. Assigned Drone ID " + regEvent.getDroneInfo().getDroneID() + "]\n");
+            event = (DroneUpdateEvent) socket.receive();
+            System.out.println("[Drone received registration approval from scheduler. Assigned Drone ID: " + event.getDroneInfo().getDroneID() + "]\n");
 
-            this.setDroneInfo(regEvent.getDroneInfo());
+            this.setDroneInfo(event.getDroneInfo());
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Error registering drone with Scheduler: " + e.getMessage());
         }
     }
 
@@ -283,7 +282,7 @@ public class DroneSubsystem {
         try{
             address = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            System.err.println("Unable to retrieve local host: " + e.getMessage());
             System.exit(1);
         }
 

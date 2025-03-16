@@ -63,9 +63,7 @@ public class Scheduler {
                 Event message = receiveSocket.receive();
 
                 // Handle event based on its type
-                if (message instanceof DroneRegistrationEvent regEvent) {
-                    handleDroneRegistration(regEvent);
-                } else if (message instanceof ZoneEvent zoneEvent) {
+                if (message instanceof ZoneEvent zoneEvent) {
                     storeZoneData(zoneEvent);
                 } else if (message instanceof IncidentEvent incidentEvent) {
                     handleIncidentEvent(incidentEvent);
@@ -77,6 +75,7 @@ public class Scheduler {
                     handleDroneUpdate(updateEvent);
                 }
             } catch (Exception e) {
+                System.err.println("Issue handling message: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -301,39 +300,37 @@ public class Scheduler {
     }
 
     /**
-     * Handles a DroneUpdateEvent, updating the drone's status and potentially assigning it a new task.
+     * Handles a DroneUpdateEvent, updating the drone's status and potentially assigning it a new task. If the droneID
+     * is uninitialized, will assign the drone an ID and add to list of registered drones.
      *
      * @param event The DroneUpdateEvent containing the updated drone details.
      */
     private void handleDroneUpdate(DroneUpdateEvent event) {
-
-        // retrieve necessary drone data
         int droneID = event.getDroneID();
-        DroneInfo drone = event.getDroneInfo();
-        dronesInfo.put(droneID, drone);
-        if (drone == null) {
-            System.out.println("[SCHEDULER] Error: Received update for unknown drone ID " + droneID);
-            return;
+
+        // If the drone ID is -1, it's a new drone requesting registration
+        if (droneID == -1) {
+            droneID = nextDroneId.getAndIncrement();
+            event.getDroneInfo().setDroneID(droneID);
+            System.out.println("[SCHEDULER] New drone detected, assigning new drone with ID: " + droneID);
+            dronesInfo.put(droneID, event.getDroneInfo());
+            this.sendToDrone(event, droneID);
+            System.out.println("\n[SCHEDULER] Registered new Drone {" + droneID + ", Address: " + event.getDroneInfo().getPort() + ", Port: " + event.getDroneInfo().getPort() + "}\n");
+        } else {
+            // Store or update the drone info
+            DroneInfo drone = event.getDroneInfo();
+            dronesInfo.put(droneID, drone);
+
+            // Ensure we don't process a null drone state
+            if (drone.getState() == null) {
+                System.out.println("[SCHEDULER] Warning: Drone " + droneID + " has no valid state.");
+                return;
+            }
+
+            // Log drone update
+            System.out.println("[SCHEDULER] Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName());
         }
 
-        // getting drone state
-        DroneState currentState = drone.getState();
-        System.out.println("\n[SCHEDULER] Received update: Drone " + droneID + " is now in state " + currentState.getClass().getSimpleName());
-    }
-
-    /**
-     * Handles incoming DroneRegistrationEvents, adding incoming registered drones to a list where they can be tracked.
-     *
-     * @param event The DroneRegistrationEvent
-     */
-    private void handleDroneRegistration(DroneRegistrationEvent event) {
-        int droneID = nextDroneId.getAndIncrement();
-        event.getDroneInfo().setDroneID(droneID);
-
-        dronesInfo.put(droneID, event.getDroneInfo());
-
-        this.sendToDrone(event, droneID);
-        System.out.println("\n[SCHEDULER] Registered new drone: " + droneID + ", Address: " + event.getPort() + ", Port: " + event.getPort() + "\n");
     }
 
     public static void main(String[] args) {
