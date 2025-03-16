@@ -183,7 +183,7 @@ public class Scheduler {
     private boolean assignDrone(IncidentEvent task) {
         int zoneID = task.getZoneID();
         Point2D fireZoneCenter = this.fireZones.get(zoneID);
-        int droneID = this.findAvailableDrone();
+        int droneID = this.findAvailableDrone(fireZoneCenter);
 
         // no drone available
         if (droneID == -1) {
@@ -210,32 +210,34 @@ public class Scheduler {
     /**
      * Checks if the drone has enough battery to complete a round trip to the target coordinates.
      *
-     * @param drone The drone to check.
+     * @param droneInfo The drone to check.
      * @param targetCoords The coordinates of the target zone.
      * @return true if the drone has enough battery, false otherwise.
      */
-    private boolean hasEnoughBattery(DroneSubsystem drone, Point2D targetCoords){
-        double distanceToTarget = drone.getCoordinates().distance(targetCoords);
+    private boolean hasEnoughBattery(DroneInfo droneInfo, Point2D targetCoords){
+        double distanceToTarget = droneInfo.getCoordinates().distance(targetCoords);
         double distanceToBase = targetCoords.distance(new Point2D.Double(0,0));
         double travelTime = (((distanceToTarget + distanceToBase) - 46.875) / 15 + 6.25);
 
-        return (drone.getFlightTime() - travelTime > 30); // use 30 sec limit for now
+        return (droneInfo.getFlightTime() - travelTime > DroneSubsystem.DRONE_BATTERY_TIME);
     }
 
     /**
      * Finds an available drone with sufficient battery and water level to complete the task.
      *
+     * @param fireZoneCenter The coordinates of the fire zone.
      * @return The ID of the available drone, or -1 if no drone is available.
      */
-    private int findAvailableDrone() {
+    private int findAvailableDrone(Point2D fireZoneCenter) {
         for (int droneID : dronesInfo.keySet()) {
+            DroneInfo droneInfo = dronesInfo.get(droneID);
             DroneState droneState = dronesInfo.get(droneID).getState();
 
             if (droneState == null) {
                 continue; // skip drones without a valid state
             }
 
-            if (droneState instanceof IdleState && !droneAssignments.containsKey(droneID)) {
+            if (droneState instanceof IdleState && !droneAssignments.containsKey(droneID) && hasEnoughBattery(droneInfo, fireZoneCenter)) {
                 System.out.println("[SCHEDULER] Found available idle drone: " + droneID);
                 return droneID;
             }

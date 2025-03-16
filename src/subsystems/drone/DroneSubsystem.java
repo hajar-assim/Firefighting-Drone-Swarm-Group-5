@@ -20,6 +20,7 @@ public class DroneSubsystem {
     private final EventSocket socket;
     private final InetAddress schedulerAddress;
     private final int schedulerPort;
+    public static int DRONE_BATTERY_TIME = 30;
     DroneInfo info;
 
 
