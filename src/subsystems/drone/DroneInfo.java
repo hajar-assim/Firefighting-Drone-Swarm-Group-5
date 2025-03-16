@@ -10,8 +10,7 @@ import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DroneInfo implements Serializable {
-    private static final AtomicInteger nextId = new AtomicInteger(1);
-    private final int droneID;
+    private int droneID;
     private DroneState state;
     private volatile boolean running;
     private int zoneID;
@@ -22,7 +21,7 @@ public class DroneInfo implements Serializable {
     private Integer port;
 
     public DroneInfo(InetAddress address, Integer port){
-        this.droneID = nextId.getAndIncrement();
+        this.droneID = -1;
         this.state = new IdleState();
         this.running = false;
         this.zoneID = 0;
@@ -40,6 +39,14 @@ public class DroneInfo implements Serializable {
      */
     public int getDroneID() {
         return droneID;
+    }
+
+    /**
+     * Sets the unique ID of the drone.
+     *
+     */
+    public void setDroneID(int droneID) {
+        this.droneID = droneID;
     }
 
     /**
@@ -152,18 +159,16 @@ public class DroneInfo implements Serializable {
 
     /**
      * TODO: javadocs
-     * @return
      */
-    public InetAddress getAddress() {
-        return address;
+    public InetAddress getAddress(){
+        return this.address;
     }
+
 
     /**
      * TODO: javadocs
-     * @return
      */
-    public Integer getPort() {
-        return port;
+    public Integer getPort(){
+        return this.port;
     }
-
 }

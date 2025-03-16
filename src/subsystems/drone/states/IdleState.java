@@ -10,7 +10,12 @@ public class IdleState implements DroneState {
     @Override
     public void handleEvent(DroneSubsystem drone, Event event) {
         if (event instanceof DroneDispatchEvent){
-            dispatch(drone, (DroneDispatchEvent) event);
+            if (((DroneDispatchEvent) event).getZoneID() == 0){
+                drone.setRunning(false);
+            }
+            else {
+                dispatch(drone, (DroneDispatchEvent) event);
+            }
         } else if (event instanceof DropAgentEvent) {
             dropAgent(drone, (DropAgentEvent) event);
         }

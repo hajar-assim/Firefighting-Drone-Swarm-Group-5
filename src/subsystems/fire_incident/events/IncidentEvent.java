@@ -10,6 +10,7 @@ public class IncidentEvent extends Event {
     private EventType eventType;
     private Severity severity;
     private int zoneID;
+    private int waterFoamAmount;
 
     /**
      * Constructs an IncidentEvent object.
@@ -24,6 +25,7 @@ public class IncidentEvent extends Event {
         this.eventType = eventType;
         this.severity = severity;
         this.zoneID = zoneID;
+        this.waterFoamAmount = severity.getWaterFoamAmount();
     }
 
     /**
@@ -51,6 +53,31 @@ public class IncidentEvent extends Event {
      */
     public Severity getSeverity() {
         return severity;
+    }
+
+    /**
+     * Sets the severity level of the incident.
+     *
+     */
+    public void setSeverity(Severity severity) {
+        this.severity = severity;
+    }
+
+    public void setWaterFoamAmount(int amount){
+        this.waterFoamAmount = amount;
+        if (amount >= 30){
+            this.setSeverity(Severity.HIGH);
+        } else if (amount >= 20) {
+            this.setSeverity(Severity.MODERATE);
+        } else if (amount > 0) {
+            this.setSeverity(Severity.LOW);
+        }else{
+            this.setSeverity(Severity.NONE);
+        }
+    }
+
+    public int getWaterFoamAmount(){
+        return this.waterFoamAmount;
     }
 
     /**

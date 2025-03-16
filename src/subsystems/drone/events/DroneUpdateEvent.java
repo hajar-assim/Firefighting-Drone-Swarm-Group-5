@@ -3,6 +3,8 @@ package subsystems.drone.events;
 import subsystems.Event;
 import subsystems.drone.DroneInfo;
 
+import java.time.LocalDateTime;
+
 /**
  * Represents an event that updates the state of a specific drone.
  */
@@ -17,7 +19,7 @@ public class DroneUpdateEvent extends Event {
      * @param droneInfo the new info of the drone
      */
     public DroneUpdateEvent(int droneID, DroneInfo droneInfo) {
-        super(null);
+        super(LocalDateTime.now().toString());
         this.droneID = droneID;
         this.droneInfo = droneInfo;
     }
