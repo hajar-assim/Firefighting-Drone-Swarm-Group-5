@@ -24,8 +24,7 @@ public class FireIncidentSubsystem {
     private final String INPUT_FOLDER;
     private File eventFile;
     private File zoneFile;
-    private EventSocket sendSocket;
-    private EventSocket receiveSocket;
+    private EventSocket socket;
     private InetAddress schedulerAddress;
     private int schedulerPort;
     private HashSet<Integer> activeFires = new HashSet<>();
@@ -38,8 +37,7 @@ public class FireIncidentSubsystem {
      * @param schedulerPort The port of the scheduler to send events to
      */
     public FireIncidentSubsystem(String inputFolderPath, InetAddress schedulerAddress, int schedulerPort) {
-        this.sendSocket = new EventSocket();
-        this.receiveSocket = new EventSocket(7000);
+        this.socket = new EventSocket(7000);
         this.schedulerAddress = schedulerAddress;
         this.schedulerPort = schedulerPort;
         this.INPUT_FOLDER = inputFolderPath;
@@ -82,10 +80,10 @@ public class FireIncidentSubsystem {
 
                 IncidentEvent incident = new IncidentEvent(parts[0], zoneId, EventType.fromString(parts[2]), Severity.fromString(parts[3]));
                 System.out.println("\n[FIRE INCIDENT SYSTEM] New incident detected: {" + incident + "}");
-                sendSocket.send(incident, schedulerAddress, schedulerPort);
+                socket.send(incident, schedulerAddress, schedulerPort);
                 activeFires.add(zoneId);
 
-                IncidentEvent event = (IncidentEvent) receiveSocket.receive();
+                IncidentEvent event = (IncidentEvent) socket.receive();
                 System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
 
                 while(event.getEventType() != EventType.DRONE_DISPATCHED){
@@ -93,7 +91,7 @@ public class FireIncidentSubsystem {
                     if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                         removeFire(event.getZoneID());
                     }
-                    event = (IncidentEvent) receiveSocket.receive();
+                    event = (IncidentEvent) socket.receive();
                     System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
                 }
             }
@@ -104,7 +102,7 @@ public class FireIncidentSubsystem {
             // only send EVENTS_DONE once all fires are extinguished
             IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE);
             System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
-            sendSocket.send(noMoreIncidents, schedulerAddress, schedulerPort);
+            socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -125,7 +123,7 @@ public class FireIncidentSubsystem {
                 String[] parts = line.split(",");
                 int zoneId = Integer.parseInt(parts[0]);
                 ZoneEvent zoneEvent = new ZoneEvent(zoneId, parts[1], parts[2]);
-                sendSocket.send(zoneEvent, schedulerAddress, schedulerPort);
+                socket.send(zoneEvent, schedulerAddress, schedulerPort);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -154,7 +152,7 @@ public class FireIncidentSubsystem {
      */
     private void waitForFiresToBeExtinguished() {
         while (!activeFires.isEmpty()) {
-            IncidentEvent event = (IncidentEvent) receiveSocket.receive();
+            IncidentEvent event = (IncidentEvent) socket.receive();
 
             if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                 removeFire(event.getZoneID());

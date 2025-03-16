@@ -9,8 +9,7 @@ import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DroneInfo implements Serializable {
-    private static final AtomicInteger nextId = new AtomicInteger(1);
-    private final int droneID;
+    private int droneID;
     private DroneState state;
     private volatile boolean running;
     private int zoneID;
@@ -19,7 +18,6 @@ public class DroneInfo implements Serializable {
     private int waterLevel;
 
     public DroneInfo(){
-        this.droneID = nextId.getAndIncrement();
         this.state = new IdleState();
         this.running = false;
         this.zoneID = 0;
@@ -35,6 +33,14 @@ public class DroneInfo implements Serializable {
      */
     public int getDroneID() {
         return droneID;
+    }
+
+    /**
+     * Sets the unique ID of the drone.
+     *
+     */
+    public void setDroneID(int droneID) {
+        this.droneID = droneID;
     }
 
     /**

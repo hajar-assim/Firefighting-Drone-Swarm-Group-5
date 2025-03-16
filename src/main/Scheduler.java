@@ -18,8 +18,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Scheduler {
+    private static final AtomicInteger nextDroneId = new AtomicInteger(1);
     public static int sleepMultiplier = 1000; // adjust to speed up or slow down (more accurate) the run --> original value = 1000
     private final EventSocket sendSocket;
     private final EventSocket receiveSocket;
@@ -38,7 +40,7 @@ public class Scheduler {
     /**
      * Constructor initializes event managers and HashMaps.
      */
-    public Scheduler(InetAddress fireSubsystemAddress, int fireSubsystemPort, Map<Integer, DroneInfo> dronesInfo, Map<Integer, InetAddress> droneAddresses, Map<Integer, Integer> dronePorts) {
+    public Scheduler(InetAddress fireSubsystemAddress, int fireSubsystemPort) {
         this.sendSocket = new EventSocket();
         this.receiveSocket = new EventSocket(5000);
         this.fireZones = new HashMap<>();
@@ -46,9 +48,9 @@ public class Scheduler {
         this.droneAssignments = new HashMap<>();
         this.fireSubsystemAddress = fireSubsystemAddress;
         this.fireSubsystemPort = fireSubsystemPort;
-        this.dronesInfo = dronesInfo;
-        this.droneAddresses = droneAddresses;
-        this.dronePorts = dronePorts;
+        this.dronesInfo = new HashMap<>();
+        this.droneAddresses = new HashMap<>();
+        this.dronePorts = new HashMap<>();
         this.unassignedIncidents = new LinkedList<>();
     }
 
@@ -392,11 +394,14 @@ public class Scheduler {
      * @param event The DroneRegistrationEvent
      */
     private void handleDroneRegistration(DroneRegistrationEvent event) {
-        int droneID = event.getDroneID();
+        int droneID = nextDroneId.getAndIncrement();
+        event.getDroneInfo().setDroneID(droneID);
+
         droneAddresses.put(droneID, event.getAddress());
         dronePorts.put(droneID, event.getPort());
-        dronesInfo.put(droneID, new DroneInfo());
+        dronesInfo.put(droneID, event.getDroneInfo());
 
+        sendSocket.send(event, event.getAddress(), event.getPort());
         System.out.println("[SCHEDULER] Registered new drone: " + droneID);
     }
 
@@ -409,11 +414,8 @@ public class Scheduler {
             System.exit(1);
         }
 
-        Map<Integer, DroneInfo> dronesInfo = new HashMap<>();
-        Map<Integer, InetAddress> droneAddresses = new HashMap<>();
-        Map<Integer, Integer> dronePorts = new HashMap<>();
 
-        Scheduler scheduler = new Scheduler(address, 7000, dronesInfo, droneAddresses, dronePorts);
+        Scheduler scheduler = new Scheduler(address, 7000);
         scheduler.run();
     }
 }
