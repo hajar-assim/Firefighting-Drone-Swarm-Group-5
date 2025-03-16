@@ -22,20 +22,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Scheduler {
     private static final AtomicInteger nextDroneId = new AtomicInteger(1);
-    public static int sleepMultiplier = 1000; // adjust to speed up or slow down (more accurate) the run --> original value = 1000
+    public static int sleepMultiplier = 500; // adjust to speed up or slow down (more accurate) the run --> original value = 1000
     private final EventSocket sendSocket;
     private final EventSocket receiveSocket;
-    private IncidentEvent unassignedTask = null;
-    private HashMap<Integer, Point2D> fireZones; // Stores fire zone coordinates (zoneID, center)
-    private HashMap<Integer, Integer> fireIncidents; // Tracks required water for each fire incident (zoneID, liters needed)
-    private HashMap<Integer, Integer> droneAssignments; // Tracks which drone is assigned to which fire (droneID, zoneID)
+    private final HashMap<Integer, Point2D> fireZones; // Stores fire zone coordinates (zoneID, center)
+    private final HashMap<Integer, IncidentEvent> droneAssignments; // Tracks which drone is assigned to which Incident
     private final InetAddress fireSubsystemAddress;
     private final int fireSubsystemPort;
-    private Map<Integer, DroneInfo> dronesInfo;
-    private Map<Integer, InetAddress> droneAddresses;
-    private Map<Integer, Integer> dronePorts;
+    private final Map<Integer, DroneInfo> dronesInfo;
+    private final Map<Integer, InetAddress> droneAddresses;
+    private final Map<Integer, Integer> dronePorts;
     private volatile boolean running = true;
-    private Queue<IncidentEvent> unassignedIncidents;
+    private final Queue<IncidentEvent> unassignedIncidents;
 
     /**
      * Constructor initializes event managers and HashMaps.
@@ -44,7 +42,6 @@ public class Scheduler {
         this.sendSocket = new EventSocket();
         this.receiveSocket = new EventSocket(5000);
         this.fireZones = new HashMap<>();
-        this.fireIncidents = new HashMap<>();
         this.droneAssignments = new HashMap<>();
         this.fireSubsystemAddress = fireSubsystemAddress;
         this.fireSubsystemPort = fireSubsystemPort;
@@ -87,6 +84,9 @@ public class Scheduler {
                 e.printStackTrace();
             }
         }
+
+        this.receiveSocket.getSocket().close();
+        this.sendSocket.getSocket().close();
     }
 
     private void sendToDrone(Event event, int droneID){
@@ -139,25 +139,13 @@ public class Scheduler {
             return;
         }
 
-        int requiredWater = event.getSeverity().getWaterFoamAmount();
-        System.out.println("\n[SCHEDULER] New fire incident at Zone " + event.getZoneID() + ". Requires " + requiredWater + "L of water.");
-        fireIncidents.put(event.getZoneID(), requiredWater);
+        System.out.println("\n[SCHEDULER] New fire incident at Zone " + event.getZoneID() + ". Requires " + event.getWaterFoamAmount() + "L of water.");
 
-        boolean assigned = assignDrone(event.getZoneID());
-
-        if (assigned) {
-            // Give drone some time to set its state to on route
-            try{
-                Thread.sleep(2000);
-            }catch (InterruptedException e){
-                e.printStackTrace();
-            }
-
+        if (assignDrone(event)) {
             event.setEventType(EventType.DRONE_DISPATCHED);
             sendSocket.send(event, fireSubsystemAddress, fireSubsystemPort);
         } else {
             System.out.println("[SCHEDULER] No drones available for fire at zone " + event.getZoneID() + ", added to unassigned incident buffer for assignment when drone is available");
-
             // Add to buffer of unassigned incidents
             unassignedIncidents.add(event);
         }
@@ -171,28 +159,20 @@ public class Scheduler {
             return;
         }
 
-        // Assume failure to assign until a task is assigned
-        boolean assignedTaskSuccessfully = false;
-
         // Process tasks in the queue
         while (!unassignedIncidents.isEmpty()) {
             // Get next task to assign
             IncidentEvent task = unassignedIncidents.peek();
             // Assign drone to task if drones are available
-            boolean assigned = assignDrone(task.getZoneID());
+            boolean assigned = assignDrone(task);
 
             if (assigned) {
-                System.out.println("[SCHEDULER] Assigned drone to waiting fire at Zone " + task.getZoneID());
-                task.setEventType(EventType.DRONE_DISPATCHED);
-
-                sendSocket.send(task, fireSubsystemAddress, fireSubsystemPort);
                 // Remove task from buffer
                 unassignedIncidents.poll();
-
-                assignedTaskSuccessfully = true;
+                task.setEventType(EventType.DRONE_DISPATCHED);
+                sendSocket.send(task, fireSubsystemAddress, fireSubsystemPort);
 
             } else {
-                System.out.println("[SCHEDULER] No drones available for waiting fire at zone " + task.getZoneID());
                 break;
             }
         }
@@ -202,17 +182,22 @@ public class Scheduler {
     /**
      * Assigns an available drone to a fire zone.
      *
-     * @param zoneID The ID of the fire zone that needs assistance.
+     * @param task The Incident event needed to be assigned.
      * @return true if a drone is successfully assigned, false otherwise.
      */
-    private boolean assignDrone(int zoneID) {
+    private boolean assignDrone(IncidentEvent task) {
+        int zoneID = task.getZoneID();
         Point2D fireZoneCenter = this.fireZones.get(zoneID);
-        int droneID = this.findAvailableDrone(fireZoneCenter);
+        int droneID = this.findAvailableDrone();
 
         // no drone available
         if (droneID == -1) {
             return false;
         }
+
+        // track drone assignment
+        droneAssignments.put(droneID, task);
+        System.out.println("[SCHEDULER] Assigned drone to waiting fire at Zone " + task.getZoneID());
 
         // send dispatch event to the drone
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter);
@@ -224,9 +209,6 @@ public class Scheduler {
         );
 
         sendToDrone(dispatchEvent, droneID);
-
-        // track drone assignment
-        droneAssignments.put(droneID, zoneID);
         return true;
     }
 
@@ -248,10 +230,9 @@ public class Scheduler {
     /**
      * Finds an available drone with sufficient battery and water level to complete the task.
      *
-     * @param fireZoneCenter The coordinates of the fire zone.
      * @return The ID of the available drone, or -1 if no drone is available.
      */
-    private int findAvailableDrone(Point2D fireZoneCenter) {
+    private int findAvailableDrone() {
         for (int droneID : dronesInfo.keySet()) {
             DroneState droneState = dronesInfo.get(droneID).getState();
 
@@ -282,17 +263,11 @@ public class Scheduler {
             return;
         }
 
-        int zoneID = droneAssignments.get(droneID);
-
-        // ensure fire incident exists for the zone
-        if (!fireIncidents.containsKey(zoneID)) {
-            System.out.println("[SCHEDULER] Error: Drone " + droneID + " arrived at untracked Zone " + zoneID);
-            return;
-        }
+        IncidentEvent incident = droneAssignments.get(droneID);
 
         // calculate how much water to drop
-        int waterToDrop = Math.min(fireIncidents.get(zoneID), dronesInfo.get(droneID).getWaterLevel());
-        System.out.println("[SCHEDULER] Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + zoneID);
+        int waterToDrop = Math.min(incident.getWaterFoamAmount(), dronesInfo.get(droneID).getWaterLevel());
+        System.out.println("[SCHEDULER] Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + incident.getZoneID());
 
         // send drop event to drone
         DropAgentEvent dropEvent = new DropAgentEvent(waterToDrop);
@@ -308,29 +283,24 @@ public class Scheduler {
         int droneID = event.getDroneID();
 
         // Get zone id using drone id key
-        int zoneID = droneAssignments.get(droneID);
+        IncidentEvent incident = droneAssignments.get(droneID);
 
-        if (!fireIncidents.containsKey(zoneID)) {
-            System.out.println("[SCHEDULER] DropAgentEvent received for unknown zone " + zoneID);
-            return;
-        }
 
         // Subtract the dropped water from the fire requirement
-        int remainingWater = fireIncidents.get(zoneID) - event.getVolume();
+        int remainingWater = incident.getWaterFoamAmount() - event.getVolume();
 
         // If required water vol has been used then remove the incident from the incident list and unassign drone from zone id
         if (remainingWater <= 0) {
-            fireIncidents.remove(zoneID);
             droneAssignments.remove(droneID);
             // notify FireIncidentSubSystem that the fire has been put out
-            IncidentEvent fireOutEvent = new IncidentEvent("", zoneID, EventType.FIRE_EXTINGUISHED, Severity.NONE);
+            IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE);
             sendSocket.send(fireOutEvent, fireSubsystemAddress, fireSubsystemPort);
         } else {
-            // Otherwise update remaining water and assign another drone to zone
-            fireIncidents.put(zoneID, remainingWater);
+            // Otherwise update remaining water and put incident in buffer
+            incident.setWaterFoamAmount(remainingWater);
             droneAssignments.remove(droneID);
-            System.out.println("[SCHEDULER] Fire at Zone " + zoneID + " still needs " + remainingWater + "L of water to extinguish.");
-            assignDrone(zoneID);
+            System.out.println("[SCHEDULER] Fire at Zone " + incident.getZoneID() + " still needs " + remainingWater + "L of water to extinguish.");
+            unassignedIncidents.add(incident);
         }
     }
 
@@ -353,39 +323,6 @@ public class Scheduler {
         // getting drone state
         DroneState currentState = drone.getState();
         System.out.println("\n[SCHEDULER] Received update: Drone " + droneID + " is now in state " + currentState.getClass().getSimpleName());
-
-        // attempt to reassign drone if idle
-        if (currentState instanceof IdleState) {
-
-            // prevent double assignment
-            if (droneAssignments.containsKey(droneID)) {
-                return;
-            }
-
-            // assign to an ongoing fire that needs water
-            for (Map.Entry<Integer, Integer> entry : fireIncidents.entrySet()) {
-                int zoneID = entry.getKey();
-                int remainingWater = entry.getValue();
-
-                if (remainingWater > 0 && !droneAssignments.containsValue(zoneID)) {
-                    System.out.println("[SCHEDULER] Reassigning Drone " + droneID + " to continue fire suppression at Zone " + zoneID);
-                    assignDrone(zoneID);
-                    return; // stop once a fire has been assigned
-                }
-            }
-
-            // if no ongoing fires, check for unassigned tasks
-            if (unassignedTask != null) {
-                System.out.println("[SCHEDULER] No active fires, assigning waiting fire at zone " + unassignedTask.getZoneID());
-                boolean assigned = assignDrone(unassignedTask.getZoneID());
-
-                if (assigned) {
-                    unassignedTask.setEventType(EventType.DRONE_DISPATCHED);
-                    sendSocket.send(unassignedTask, fireSubsystemAddress, fireSubsystemPort);
-                    unassignedTask = null;
-                }
-            }
-        }
     }
 
     /**
@@ -405,7 +342,7 @@ public class Scheduler {
         System.out.println("\n[SCHEDULER] Registered new drone: " + droneID + ", Address: " + event.getPort() + ", Port: " + event.getPort() + "\n");
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();

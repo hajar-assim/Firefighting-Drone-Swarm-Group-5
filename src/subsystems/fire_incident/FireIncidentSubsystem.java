@@ -82,27 +82,9 @@ public class FireIncidentSubsystem {
                 System.out.println("\n[FIRE INCIDENT SYSTEM] New incident detected: {" + incident + "}");
                 socket.send(incident, schedulerAddress, schedulerPort);
                 activeFires.add(zoneId);
-
-                IncidentEvent event = (IncidentEvent) socket.receive();
-                System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
-
-                while(event.getEventType() != EventType.DRONE_DISPATCHED){
-                    // If the fire was extinguished before all events were reported, remove it
-                    if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
-                        removeFire(event.getZoneID());
-                    }
-                    event = (IncidentEvent) socket.receive();
-                    System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
-                }
             }
 
             System.out.println("[FIRE INCIDENT SYSTEM] All fires reported, waiting for all fires to be extinguished...");
-            waitForFiresToBeExtinguished();
-
-            // only send EVENTS_DONE once all fires are extinguished
-            IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE);
-            System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
-            socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -156,6 +138,8 @@ public class FireIncidentSubsystem {
 
             if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                 removeFire(event.getZoneID());
+            }else{
+                System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
             }
         }
     }
@@ -168,9 +152,19 @@ public class FireIncidentSubsystem {
     public void run() {
         this.parseZones();
         this.parseEvents();
+
+        waitForFiresToBeExtinguished();
+
+        // only send EVENTS_DONE once all fires are extinguished
+        IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE);
+        System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
+        socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
+
+        socket.getSocket().close();
+
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();

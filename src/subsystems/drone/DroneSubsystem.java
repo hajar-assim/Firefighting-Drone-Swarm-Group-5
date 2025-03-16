@@ -240,6 +240,8 @@ public class DroneSubsystem {
             Event event = socket.receive();
             getState().handleEvent(this, event);
         }
+        System.out.println("[Drone " + this.getDroneID() + "] No more incidents, shutting down...");
+        socket.getSocket().close();
     }
 
     /**
@@ -260,7 +262,7 @@ public class DroneSubsystem {
             System.out.println("[DRONE] Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort());
 
             regEvent = (DroneRegistrationEvent) socket.receive();
-            System.out.println("[Drone received registration approval from scheduler. Assigned Drone ID " + regEvent.getDroneInfo().getDroneID() + "\n");
+            System.out.println("[Drone received registration approval from scheduler. Assigned Drone ID " + regEvent.getDroneInfo().getDroneID() + "]\n");
 
             this.setDroneInfo(regEvent.getDroneInfo());
         } catch (Exception e) {
@@ -272,7 +274,7 @@ public class DroneSubsystem {
      * Creates a new drone.
      * @param args
      */
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();
