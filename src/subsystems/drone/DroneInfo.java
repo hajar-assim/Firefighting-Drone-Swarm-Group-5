@@ -6,26 +6,39 @@ import subsystems.fire_incident.FireIncidentSubsystem;
 
 import java.awt.geom.Point2D;
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DroneInfo implements Serializable {
-    private static final AtomicInteger nextId = new AtomicInteger(1);
-    private final int droneID;
+    private int droneID;
     private DroneState state;
     private volatile boolean running;
     private int zoneID;
     private Point2D coordinates;
     private double flightTime;
     private int waterLevel;
+    private InetAddress address;
+    private Integer port;
 
-    public DroneInfo(){
-        this.droneID = nextId.getAndIncrement();
+
+    /**
+     * Constructs a new DroneInfo object with the specified address and port.
+     * Initializes the drone's state, flight time, water level, and other parameters
+     * to their default values.
+     *
+     * @param address The InetAddress representing the drone's network address.
+     * @param port The port number to associate with the drone.
+     */
+    public DroneInfo(InetAddress address, Integer port){
+        this.droneID = -1;
         this.state = new IdleState();
         this.running = false;
         this.zoneID = 0;
         this.coordinates = FireIncidentSubsystem.BASE_COORDINATES;
         this.flightTime = 10 * 60;
         this.waterLevel = 15;
+        this.address = address;
+        this.port = port;
     }
 
     /**
@@ -35,6 +48,14 @@ public class DroneInfo implements Serializable {
      */
     public int getDroneID() {
         return droneID;
+    }
+
+    /**
+     * Sets the unique ID of the drone.
+     *
+     */
+    public void setDroneID(int droneID) {
+        this.droneID = droneID;
     }
 
     /**
@@ -143,5 +164,20 @@ public class DroneInfo implements Serializable {
      */
     public void setRunning(boolean running){
         this.running = running;
+    }
+
+    /**
+     * TODO: javadocs
+     */
+    public InetAddress getAddress(){
+        return this.address;
+    }
+
+
+    /**
+     * TODO: javadocs
+     */
+    public Integer getPort(){
+        return this.port;
     }
 }

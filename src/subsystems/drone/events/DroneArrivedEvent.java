@@ -2,6 +2,8 @@ package subsystems.drone.events;
 
 import subsystems.Event;
 
+import java.time.LocalDateTime;
+
 /**
  * Represents an event when a drone arrives at a specific zone.
  */
@@ -16,7 +18,7 @@ public class DroneArrivedEvent extends Event {
      * @param zoneID the ID of the zone where the drone has arrived
      */
     public DroneArrivedEvent(int droneID, int zoneID) {
-        super(null);
+        super(LocalDateTime.now().toString());
         this.droneID = droneID;
         this.zoneID = zoneID;
     }

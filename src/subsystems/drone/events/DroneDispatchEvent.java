@@ -3,10 +3,12 @@ package subsystems.drone.events;
 import subsystems.Event;
 
 import java.awt.geom.Point2D;
+import java.time.LocalDateTime;
 
 /**
  * Represents an event where a drone is dispatched to a specific zone with coordinates.
  */
+
 public class DroneDispatchEvent extends Event {
     private int zoneID;
     private Point2D coords;
@@ -19,7 +21,7 @@ public class DroneDispatchEvent extends Event {
      * @param coords the coordinates of the dispatch location
      */
     public DroneDispatchEvent(int zoneID, Point2D coords) {
-        super(null);
+        super(LocalDateTime.now().toString());
         this.zoneID = zoneID;
         this.coords = coords;
     }

@@ -13,14 +13,14 @@ import java.net.UnknownHostException;
 
 /**
  * The {@code DroneSubsystem} class represents a drone unit that responds to incident events.
- * It continuously listens for new events from the receive event queue, processes them,
+ * It continuously listens for new events from the recieve event queue, processes them,
  * and dispatches responses to the send event queue.
  */
 public class DroneSubsystem {
-    private EventSocket sendSocket;
-    private EventSocket receiveSocket;
-    private InetAddress schedulerAddress;
-    private int schedulerPort;
+    private final EventSocket socket;
+    private final InetAddress schedulerAddress;
+    private final int schedulerPort;
+    public static int DRONE_BATTERY_TIME = 30;
     DroneInfo info;
 
 
@@ -31,9 +31,12 @@ public class DroneSubsystem {
      * @param schedulerPort The port of the scheduler to send events to
      */
     public DroneSubsystem(InetAddress schedulerAddress, int schedulerPort) {
-        info = new DroneInfo();
-        sendSocket = new EventSocket();
-        receiveSocket = new EventSocket(6000 + info.getDroneID());
+        socket = new EventSocket();
+        try {
+            info = new DroneInfo(InetAddress.getLocalHost(), socket.getSocket().getLocalPort());
+        } catch (UnknownHostException e) {
+            System.err.println("Unknown host being assigned to Drone.");
+        }
         this.schedulerAddress = schedulerAddress;
         this.schedulerPort = schedulerPort;
     }
@@ -48,21 +51,12 @@ public class DroneSubsystem {
     }
 
     /**
-     * Returns the receiving socket of the drone.
-     *
-     * @return The EventSocket.
-     */
-    public EventSocket getRecieveSocket(){
-        return this.receiveSocket;
-    }
-
-    /**
      * Returns the sending socket of the drone.
      *
      * @return The EventSocket.
      */
-    public EventSocket getSendSocket(){
-        return this.sendSocket;
+    public EventSocket getSocket(){
+        return this.socket;
     }
 
     /**
@@ -118,7 +112,7 @@ public class DroneSubsystem {
     public void setState(DroneState newState){
         info.setState(newState);
         DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(getDroneID(), info);
-        sendSocket.send(droneUpdateEvent, getSchedulerAddress(), getSchedulerPort());
+        socket.send(droneUpdateEvent, getSchedulerAddress(), getSchedulerPort());
     }
 
     /**
@@ -157,7 +151,7 @@ public class DroneSubsystem {
         info.setCoordinates(coordinates);
         if(getZoneID() != 0){
             DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(getDroneID(), getZoneID());
-            sendSocket.send(arrivedEvent, schedulerAddress, schedulerPort);
+            socket.send(arrivedEvent, schedulerAddress, schedulerPort);
         }
     }
 
@@ -205,7 +199,7 @@ public class DroneSubsystem {
     public void subtractWaterLevel(int change) {
         info.setWaterLevel(info.getWaterLevel() - change);
         DropAgentEvent dropEvent =  new DropAgentEvent(change, getDroneID());
-        sendSocket.send(dropEvent, schedulerAddress, schedulerPort);
+        socket.send(dropEvent, schedulerAddress, schedulerPort);
     }
 
     /**
@@ -245,10 +239,13 @@ public class DroneSubsystem {
      */
     public void run() {
         setRunning(true);
+        registerWithScheduler();
         while (getRunning()) {
-            Event event = receiveSocket.receive();
+            Event event = socket.receive();
             getState().handleEvent(this, event);
         }
+        System.out.println("[Drone " + this.getDroneID() + "] No more incidents, shutting down...");
+        socket.getSocket().close();
     }
 
     /**
@@ -262,12 +259,40 @@ public class DroneSubsystem {
                 getZoneID(), getCoordinates().getX(), getCoordinates().getY(), getFlightTime(), getWaterLevel());
     }
 
-    public static void main(String args[]) {
+    /**
+     * Registers the drone with the scheduler by sending a registration event
+     * and awaiting confirmation. Once the drone is successfully registered,
+     * the drone's information is updated with the assigned Drone ID.
+     *
+     * In the process, the drone sends its information to the scheduler and
+     * waits for a response. If the registration is successful, the drone's
+     * information is updated with the assigned Drone ID.
+     */
+    private void registerWithScheduler() {
+        try {
+            DroneUpdateEvent event = new DroneUpdateEvent(-1, this.info);
+            socket.send(event, schedulerAddress, schedulerPort);
+            System.out.println("[DRONE] Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort());
+
+            event = (DroneUpdateEvent) socket.receive();
+            System.out.println("[Drone received registration approval from scheduler. Assigned Drone ID: " + event.getDroneInfo().getDroneID() + "]\n");
+
+            this.setDroneInfo(event.getDroneInfo());
+        } catch (Exception e) {
+            System.err.println("Error registering drone with Scheduler: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Creates a new drone.
+     * @param args
+     */
+    public static void main(String[] args) {
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            System.err.println("Unable to retrieve local host: " + e.getMessage());
             System.exit(1);
         }
 

@@ -11,39 +11,6 @@ This project simulates a firefighting drone swarm system, which includes the fol
 # Iteration #1
 For Iteration #1, the focus is on establishing basic communication between these components. Real scheduling logic will be introduced in later iterations.
 
-### Project Structure
-```
-Firefighting-Drone-Swarm-Group-5/
-├── data/
-│   ├── fire_events_sample.csv
-│   └── fire_zone_sample.csv
-├── out/
-├── src/
-    ├── diagrams/
-    │   ├── DRONE_STATE_MACHINE.puml
-    │   └── SCHEDULER_STATE_MACHINE.puml
-    ├── events/
-    │   ├── EventType.java
-    │   ├── IncidentEvent.java
-    │   └── Severity.java
-    ├── main/
-    │   ├── EventQueueManager.java
-    │   ├── Main.java
-    │   └── Scheduler.java
-    ├── subsystems/
-    │   ├── DroneSubsystem.java
-    │   └── FireIncidentSubsystem.java
-    └── test/
-        ├── DroneSubsystemTest.java
-        ├── EventQueueManagerTest.java
-        ├── FireIncidentSubsystemTest.java
-        ├── IncidentEventTest.java
-        └── SchedulerTest.java
-├── .gitignore
-├── Firefighting-Drone-Swarm-Group-5.iml
-└── README.md
-```
-
 ## File Descriptions
 
 ### Data Files (`/data`)
@@ -139,6 +106,52 @@ cd Firefighting-Drone-Swarm-Group-5
 
 ***
 ## Iteration #3
+
+### Overview
+Iteration #3 introduces a significant change in the architecture of the system. The focus is on enabling **distributed execution**, where different components of the system (such as the Scheduler and the Drones) run on separate machines. Communication between these components is facilitated using **UDP** to handle the coordination and status updates in real-time.
+
+The **Scheduler** now coordinates multiple drones and assigns them tasks to ensure a balanced workload. Each drone operates independently, but it reports its status to the Scheduler, allowing the system to optimize task allocation based on drone availability and fire zone severity.
+
+### Key Features
+- **Distributed Execution**: The system is split into separate programs that run on different machines, enabling the simultaneous operation of multiple drones.
+- **Scheduler Coordination**: The Scheduler now handles multiple drones, ensuring that each drone services roughly the same number of zones, minimizing the waiting time for fires to be extinguished.
+- **Drone Independence**: Each drone operates using its own state machine, but it shares its status (location, availability, etc.) with the Scheduler, which makes decisions about which drone should service which fire zone.
+
+### New & Updated Source Files
+- **main/**
+  - `EventSocket.java`: Handles the UDP communication for message passing between the Scheduler and the Drones.
+  - `Scheduler.java`: Enhanced to coordinate multiple drones, ensuring balanced workload and minimizing fire waiting times.
+
+- **subsystems/drone/**
+  - `DroneInfo.java`: A class that holds drone-specific data, such as ID, current location, and status.
+  - `DroneSubsystem.java`: Manages drone operations, including state transitions and task execution.
+  - **events/**: Contains the new event classes related to drone actions.
+    - `DroneArrivedEvent.java`: Notifies when a drone arrives at a fire zone.
+    - `DroneDispatchEvent.java`: Represents when a drone is assigned to a fire.
+    - `DroneRegistrationEvent.java`: Event triggered when a new drone is registered in the system.
+    - `DroneUpdateEvent.java`: Tracks changes in drone states (e.g., IDLE → ON_ROUTE).
+    - `DropAgentEvent.java`: Represents a drone performing a water drop.
+  - **states/**: Represents the different states in the drone's state machine.
+    - `DroneState.java`: Base class for all drone states.
+    - `DroppingAgentState.java`: Represents the state when a drone is dropping water.
+    - `IdleState.java`: Represents the state when a drone is idle and waiting for a task.
+    - `OnRouteState.java`: Represents the state when a drone is on its way to a fire zone.
+
+- **subsystems/fire_incident/**
+  - `FireIncidentSubsystem.java`: Manages fire incidents and communicates with the Scheduler to assign drones.
+  - **events/**: Contains event-related classes for fire incidents.
+    - `IncidentEvent.java`: Represents an incident event, including the details of the fire and its severity.
+    - `Severity.java`: Enum for fire severity levels (e.g., LOW, MODERATE, HIGH).
+    - `ZoneEvent.java`: Represents an event related to a fire zone, like zone status updates.
+
+- **test/**
+  - `DroneSubsystemTest.java`: Updated to test the behavior of drones in a distributed environment.
+  - `EventTest.java`: Added tests for new event types like `DroneRegistrationEvent` and `DroneUpdateEvent`.
+  - `FireIncidentSubsystemTest.java`: Tests for the fire incident subsystem's interaction with the distributed Scheduler.
+  - `IncidentEventTest.java`: Tests for handling of incident events, including severity and zone updates.
+  - `SchedulerTest.java`: Tests for the Scheduler's ability to manage multiple drones and allocate tasks efficiently.
+  - `ZoneEventTest.java`: Tests for events related to fire zones, including updates on zone status.
+
 ***
 ## Iteration #4
 ***
