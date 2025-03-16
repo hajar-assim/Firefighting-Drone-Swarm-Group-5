@@ -11,39 +11,6 @@ This project simulates a firefighting drone swarm system, which includes the fol
 # Iteration #1
 For Iteration #1, the focus is on establishing basic communication between these components. Real scheduling logic will be introduced in later iterations.
 
-### Project Structure
-```
-Firefighting-Drone-Swarm-Group-5/
-├── data/
-│   ├── fire_events_sample.csv
-│   └── fire_zone_sample.csv
-├── out/
-├── src/
-    ├── diagrams/
-    │   ├── DRONE_STATE_MACHINE.puml
-    │   └── SCHEDULER_STATE_MACHINE.puml
-    ├── events/
-    │   ├── EventType.java
-    │   ├── IncidentEvent.java
-    │   └── Severity.java
-    ├── main/
-    │   ├── EventQueueManager.java
-    │   ├── Main.java
-    │   └── Scheduler.java
-    ├── subsystems/
-    │   ├── DroneSubsystem.java
-    │   └── FireIncidentSubsystem.java
-    └── test/
-        ├── DroneSubsystemTest.java
-        ├── EventQueueManagerTest.java
-        ├── FireIncidentSubsystemTest.java
-        ├── IncidentEventTest.java
-        └── SchedulerTest.java
-├── .gitignore
-├── Firefighting-Drone-Swarm-Group-5.iml
-└── README.md
-```
-
 ## File Descriptions
 
 ### Data Files (`/data`)
