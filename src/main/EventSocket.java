@@ -48,22 +48,22 @@ EventSocket {
     }
 
     public Event receive() {
-        byte data[] = new byte[1000];
+        byte[] data = new byte[1000];
         DatagramPacket packet = new DatagramPacket(data, data.length);
 
         Event event = null;
 
-        try{
+        try {
             socket.receive(packet);
 
-            // Deserialize object
-            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data, 0, packet.getLength());
             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
             event = (Event) objectInputStream.readObject();
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
         return event;
     }
+
 }
