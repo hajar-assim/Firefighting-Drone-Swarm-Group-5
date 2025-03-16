@@ -6,6 +6,7 @@ import subsystems.fire_incident.FireIncidentSubsystem;
 
 import java.awt.geom.Point2D;
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DroneInfo implements Serializable {
@@ -17,8 +18,10 @@ public class DroneInfo implements Serializable {
     private Point2D coordinates;
     private double flightTime;
     private int waterLevel;
+    private InetAddress address;
+    private Integer port;
 
-    public DroneInfo(){
+    public DroneInfo(InetAddress address, Integer port){
         this.droneID = nextId.getAndIncrement();
         this.state = new IdleState();
         this.running = false;
@@ -26,6 +29,8 @@ public class DroneInfo implements Serializable {
         this.coordinates = FireIncidentSubsystem.BASE_COORDINATES;
         this.flightTime = 10 * 60;
         this.waterLevel = 15;
+        this.address = address;
+        this.port = port;
     }
 
     /**
@@ -144,4 +149,21 @@ public class DroneInfo implements Serializable {
     public void setRunning(boolean running){
         this.running = running;
     }
+
+    /**
+     * TODO: javadocs
+     * @return
+     */
+    public InetAddress getAddress() {
+        return address;
+    }
+
+    /**
+     * TODO: javadocs
+     * @return
+     */
+    public Integer getPort() {
+        return port;
+    }
+
 }

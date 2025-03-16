@@ -30,8 +30,6 @@ public class Scheduler {
     private InetAddress fireSubsystemAddress;
     private int fireSubsystemPort;
     private Map<Integer, DroneInfo> dronesInfo;
-    private Map<Integer, InetAddress> droneAddresses;
-    private Map<Integer, Integer> dronePorts;
     private volatile boolean running = true;
     private Queue<IncidentEvent> unassignedIncidents;
 
@@ -47,8 +45,6 @@ public class Scheduler {
         this.fireSubsystemAddress = fireSubsystemAddress;
         this.fireSubsystemPort = fireSubsystemPort;
         this.dronesInfo = dronesInfo;
-        this.droneAddresses = droneAddresses;
-        this.dronePorts = dronePorts;
         this.unassignedIncidents = new LinkedList<>();
     }
 
@@ -86,8 +82,8 @@ public class Scheduler {
     }
 
     private void sendToDrone(Event event, int droneID){
-        InetAddress address = droneAddresses.get(droneID);
-        Integer port = dronePorts.get(droneID);
+        InetAddress address = dronesInfo.get(droneID).getAddress();
+        Integer port = dronesInfo.get(droneID).getPort();
 
         if (address != null && port != null) {
             sendSocket.send(event, address, port);
@@ -123,7 +119,7 @@ public class Scheduler {
             System.out.println("\n[SCHEDULER] Received EVENTS_DONE.");
             DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0));
 
-            for (int droneID : this.droneAddresses.keySet()) {
+            for (int droneID : this.dronesInfo.keySet()) {
                 sendToDrone(dispatchToBase, droneID);
             }
             running = false;
@@ -161,12 +157,10 @@ public class Scheduler {
 
     /**
      * Attempts to assign unassigned tasks to available drones.
-     *
-     * @return true if at least one task is assigned, false otherwise.
      */
-    private boolean attemptAssignUnassignedTask() {
+    private void attemptAssignUnassignedTask() {
         if (unassignedIncidents.isEmpty()) {
-            return false;
+            return;
         }
 
         // Assume failure to assign until a task is assigned
@@ -195,7 +189,6 @@ public class Scheduler {
             }
         }
 
-        return assignedTaskSuccessfully;
     }
 
     /**
@@ -401,9 +394,7 @@ public class Scheduler {
         Map<Integer, Integer> dronePorts = new HashMap<>();
 
         for(int i = 1; i <= 1; i++){
-            dronesInfo.put(i, new DroneInfo());
-            droneAddresses.put(i, address);
-            dronePorts.put(i, 6000 + i);
+            dronesInfo.put(i, new DroneInfo(address, 6000 + i));
         }
 
         Scheduler scheduler = new Scheduler(address, 7000, dronesInfo, droneAddresses, dronePorts);
