@@ -259,6 +259,15 @@ public class DroneSubsystem {
                 getZoneID(), getCoordinates().getX(), getCoordinates().getY(), getFlightTime(), getWaterLevel());
     }
 
+    /**
+     * Registers the drone with the scheduler by sending a registration event
+     * and awaiting confirmation. Once the drone is successfully registered,
+     * the drone's information is updated with the assigned Drone ID.
+     *
+     * In the process, the drone sends its information to the scheduler and
+     * waits for a response. If the registration is successful, the drone's
+     * information is updated with the assigned Drone ID.
+     */
     private void registerWithScheduler() {
         try {
             DroneUpdateEvent event = new DroneUpdateEvent(-1, this.info);

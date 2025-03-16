@@ -20,6 +20,15 @@ public class DroneInfo implements Serializable {
     private InetAddress address;
     private Integer port;
 
+
+    /**
+     * Constructs a new DroneInfo object with the specified address and port.
+     * Initializes the drone's state, flight time, water level, and other parameters
+     * to their default values.
+     *
+     * @param address The InetAddress representing the drone's network address.
+     * @param port The port number to associate with the drone.
+     */
     public DroneInfo(InetAddress address, Integer port){
         this.droneID = -1;
         this.state = new IdleState();

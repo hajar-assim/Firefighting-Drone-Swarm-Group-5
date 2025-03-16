@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 /**
  * Represents an event where a drone is dispatched to a specific zone with coordinates.
  */
+
 public class DroneDispatchEvent extends Event {
     private int zoneID;
     private Point2D coords;

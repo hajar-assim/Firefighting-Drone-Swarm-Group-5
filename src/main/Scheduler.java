@@ -84,6 +84,14 @@ public class Scheduler {
         this.sendSocket.getSocket().close();
     }
 
+    /**
+     * Sends an event to a specific drone based on its ID.
+     * Retrieves the drone's address and port from the dronesInfo map and sends the event using the EventSocket.
+     * If the address or port is not found, an error message is printed.
+     *
+     * @param event The event to be sent to the drone.
+     * @param droneID The ID of the drone to which the event will be sent.
+     */
     private void sendToDrone(Event event, int droneID){
         InetAddress address = dronesInfo.get(droneID).getAddress();
         Integer port = dronesInfo.get(droneID).getPort();
@@ -335,6 +343,12 @@ public class Scheduler {
 
     }
 
+    /**
+     * The entry point of the Firefighting Drone Swarm program.
+     * Initializes the scheduler and runs it.
+     *
+     * @param args Command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println("======== FIREFIGHTING DRONE SWARM ========");
         System.out.println("[SCHEDULER] Scheduler has started.");
