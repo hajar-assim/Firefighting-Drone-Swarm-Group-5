@@ -3,6 +3,7 @@ package subsystems.drone;
 import main.EventSocket;
 import subsystems.Event;
 import subsystems.drone.events.DroneArrivedEvent;
+import subsystems.drone.events.DroneRegistrationEvent;
 import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.states.DroneState;
@@ -245,6 +246,7 @@ public class DroneSubsystem {
      */
     public void run() {
         setRunning(true);
+        registerWithScheduler();
         while (getRunning()) {
             Event event = receiveSocket.receive();
             getState().handleEvent(this, event);
@@ -262,6 +264,20 @@ public class DroneSubsystem {
                 getZoneID(), getCoordinates().getX(), getCoordinates().getY(), getFlightTime(), getWaterLevel());
     }
 
+    private void registerWithScheduler() {
+        try {
+            DroneRegistrationEvent regEvent = new DroneRegistrationEvent(getDroneID(), InetAddress.getLocalHost(), receiveSocket.getSocket().getPort());
+            sendSocket.send(regEvent, schedulerAddress, schedulerPort);
+            System.out.println("[DRONE " + getDroneID() + "] Sent registration to Scheduler.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Creates a new drone.
+     * @param args
+     */
     public static void main(String args[]) {
         InetAddress address = null;
         try{

@@ -21,14 +21,14 @@ import java.util.Queue;
 
 public class Scheduler {
     public static int sleepMultiplier = 1000; // adjust to speed up or slow down (more accurate) the run --> original value = 1000
-    private EventSocket sendSocket;
-    private EventSocket receiveSocket;
+    private final EventSocket sendSocket;
+    private final EventSocket receiveSocket;
     private IncidentEvent unassignedTask = null;
     private HashMap<Integer, Point2D> fireZones; // Stores fire zone coordinates (zoneID, center)
     private HashMap<Integer, Integer> fireIncidents; // Tracks required water for each fire incident (zoneID, liters needed)
     private HashMap<Integer, Integer> droneAssignments; // Tracks which drone is assigned to which fire (droneID, zoneID)
-    private InetAddress fireSubsystemAddress;
-    private int fireSubsystemPort;
+    private final InetAddress fireSubsystemAddress;
+    private final int fireSubsystemPort;
     private Map<Integer, DroneInfo> dronesInfo;
     private Map<Integer, InetAddress> droneAddresses;
     private Map<Integer, Integer> dronePorts;
@@ -68,7 +68,9 @@ public class Scheduler {
                 Event message = receiveSocket.receive();
 
                 // Handle event based on its type
-                if (message instanceof ZoneEvent zoneEvent) {
+                if (message instanceof DroneRegistrationEvent regEvent) {
+                    handleDroneRegistration(regEvent);
+                } else if (message instanceof ZoneEvent zoneEvent) {
                     storeZoneData(zoneEvent);
                 } else if (message instanceof IncidentEvent incidentEvent) {
                     handleIncidentEvent(incidentEvent);
@@ -161,12 +163,10 @@ public class Scheduler {
 
     /**
      * Attempts to assign unassigned tasks to available drones.
-     *
-     * @return true if at least one task is assigned, false otherwise.
      */
-    private boolean attemptAssignUnassignedTask() {
+    private void attemptAssignUnassignedTask() {
         if (unassignedIncidents.isEmpty()) {
-            return false;
+            return;
         }
 
         // Assume failure to assign until a task is assigned
@@ -195,7 +195,6 @@ public class Scheduler {
             }
         }
 
-        return assignedTaskSuccessfully;
     }
 
     /**
@@ -387,6 +386,20 @@ public class Scheduler {
         }
     }
 
+    /**
+     * Handles incoming DroneRegistrationEvents, adding incoming registered drones to a list where they can be tracked.
+     *
+     * @param event The DroneRegistrationEvent
+     */
+    private void handleDroneRegistration(DroneRegistrationEvent event) {
+        int droneID = event.getDroneID();
+        droneAddresses.put(droneID, event.getAddress());
+        dronePorts.put(droneID, event.getPort());
+        dronesInfo.put(droneID, new DroneInfo());
+
+        System.out.println("[SCHEDULER] Registered new drone: " + droneID);
+    }
+
     public static void main(String args[]) {
         InetAddress address = null;
         try{
@@ -399,12 +412,6 @@ public class Scheduler {
         Map<Integer, DroneInfo> dronesInfo = new HashMap<>();
         Map<Integer, InetAddress> droneAddresses = new HashMap<>();
         Map<Integer, Integer> dronePorts = new HashMap<>();
-
-        for(int i = 1; i <= 1; i++){
-            dronesInfo.put(i, new DroneInfo());
-            droneAddresses.put(i, address);
-            dronePorts.put(i, 6000 + i);
-        }
 
         Scheduler scheduler = new Scheduler(address, 7000, dronesInfo, droneAddresses, dronePorts);
         scheduler.run();
