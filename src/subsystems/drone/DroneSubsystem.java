@@ -123,14 +123,22 @@ public class DroneSubsystem {
     }
 
     /**
-     * Sets a new state for the drone.
+     * Sets the new state of the drone using predefined stae map/
+     * Instead of creating a new instance every time, this method retrieves
+     * the pre-existing instance from the stateMap to optimize memory storage
      *
-     * @param newState The new state to transition to.
+     * @param stateClass Mapped states for Idle, OnRoute, Dropping
      */
-    public void setState(DroneState newState){
-        info.setState(newState);
-        DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(getDroneID(), info);
-        sendSocket.send(droneUpdateEvent, getSchedulerAddress(), getSchedulerPort());
+    public void setState(Class<? extends DroneState> stateClass){
+       if (stateMap.containsKey(stateClass)){
+           info.setState(stateMap.get(stateClass));
+       }else{
+           System.out.println("Error, state not found: " + stateClass.getSimpleName());
+           return;
+       }
+       DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(getDroneID(), info);
+       sendSocket.send(droneUpdateEvent, getSchedulerAddress(), getSchedulerPort());
+
     }
 
     /**
