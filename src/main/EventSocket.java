@@ -61,5 +61,9 @@ public class EventSocket {
 
     public DatagramSocket getSocket() {
         return socket;
+
+    // used in Unit Tests for FireIncidentSubsystemTest cleanup
+    public void close() {
+        socket.close();
     }
 }

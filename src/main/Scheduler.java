@@ -347,7 +347,6 @@ public class Scheduler {
             System.exit(1);
         }
 
-
         Scheduler scheduler = new Scheduler(address, 7000);
         scheduler.run();
     }
