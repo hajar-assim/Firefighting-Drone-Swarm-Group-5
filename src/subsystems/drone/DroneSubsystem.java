@@ -2,6 +2,9 @@ package subsystems.drone;
 
 import main.EventSocket;
 import subsystems.Event;
+import subsystems.drone.events.DroneArrivedEvent;
+import subsystems.drone.events.DroneUpdateEvent;
+import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.states.DroneState;
 
 import java.awt.geom.Point2D;
@@ -10,14 +13,14 @@ import java.net.UnknownHostException;
 
 /**
  * The {@code DroneSubsystem} class represents a drone unit that responds to incident events.
- * It continuously listens for new events from the receive event queue, processes them,
+ * It continuously listens for new events from the recieve event queue, processes them,
  * and dispatches responses to the send event queue.
  */
 public class DroneSubsystem {
-    private EventSocket sendSocket;
-    private EventSocket receiveSocket;
-    private InetAddress schedulerAddress;
-    private int schedulerPort;
+    private final EventSocket socket;
+    private final InetAddress schedulerAddress;
+    private final int schedulerPort;
+    public static int DRONE_BATTERY_TIME = 30;
     DroneInfo info;
 
 
@@ -28,9 +31,12 @@ public class DroneSubsystem {
      * @param schedulerPort The port of the scheduler to send events to
      */
     public DroneSubsystem(InetAddress schedulerAddress, int schedulerPort) {
-        info = new DroneInfo();
-        sendSocket = new EventSocket();
-        receiveSocket = new EventSocket(6000 + info.getDroneID());
+        socket = new EventSocket();
+        try {
+            info = new DroneInfo(InetAddress.getLocalHost(), socket.getSocket().getLocalPort());
+        } catch (UnknownHostException e) {
+            System.err.println("Unknown host being assigned to Drone.");
+        }
         this.schedulerAddress = schedulerAddress;
         this.schedulerPort = schedulerPort;
     }
@@ -45,21 +51,12 @@ public class DroneSubsystem {
     }
 
     /**
-     * Returns the receiving socket of the drone.
-     *
-     * @return The EventSocket.
-     */
-    public EventSocket getRecieveSocket(){
-        return this.receiveSocket;
-    }
-
-    /**
      * Returns the sending socket of the drone.
      *
      * @return The EventSocket.
      */
-    public EventSocket getSendSocket(){
-        return this.sendSocket;
+    public EventSocket getSocket(){
+        return this.socket;
     }
 
     /**
@@ -114,6 +111,8 @@ public class DroneSubsystem {
      */
     public void setState(DroneState newState){
         info.setState(newState);
+        DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(getDroneID(), info);
+        socket.send(droneUpdateEvent, getSchedulerAddress(), getSchedulerPort());
     }
 
     /**
@@ -150,6 +149,10 @@ public class DroneSubsystem {
      */
     public void setCoordinates(Point2D coordinates) {
         info.setCoordinates(coordinates);
+        if(getZoneID() != 0){
+            DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(getDroneID(), getZoneID());
+            socket.send(arrivedEvent, schedulerAddress, schedulerPort);
+        }
     }
 
     /**
@@ -182,10 +185,21 @@ public class DroneSubsystem {
     /**
      * Sets the remaining water level in the drone.
      *
-     * @param waterLevel the new water level in percentage
+     * @param waterLevel the new water level
      */
     public void setWaterLevel(int waterLevel) {
         info.setWaterLevel(waterLevel);
+    }
+
+    /**
+     * Changes the remaining water level in the drone.
+     *
+     * @param change the value to subtract to new water level
+     */
+    public void subtractWaterLevel(int change) {
+        info.setWaterLevel(info.getWaterLevel() - change);
+        DropAgentEvent dropEvent =  new DropAgentEvent(change, getDroneID());
+        socket.send(dropEvent, schedulerAddress, schedulerPort);
     }
 
     /**
@@ -225,10 +239,13 @@ public class DroneSubsystem {
      */
     public void run() {
         setRunning(true);
+        registerWithScheduler();
         while (getRunning()) {
-            Event event = receiveSocket.receive();
+            Event event = socket.receive();
             getState().handleEvent(this, event);
         }
+        System.out.println("[Drone " + this.getDroneID() + "] No more incidents, shutting down...");
+        socket.getSocket().close();
     }
 
     /**
@@ -242,12 +259,31 @@ public class DroneSubsystem {
                 getZoneID(), getCoordinates().getX(), getCoordinates().getY(), getFlightTime(), getWaterLevel());
     }
 
-    public static void main(String args[]) {
+    private void registerWithScheduler() {
+        try {
+            DroneUpdateEvent event = new DroneUpdateEvent(-1, this.info);
+            socket.send(event, schedulerAddress, schedulerPort);
+            System.out.println("[DRONE] Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort());
+
+            event = (DroneUpdateEvent) socket.receive();
+            System.out.println("[Drone received registration approval from scheduler. Assigned Drone ID: " + event.getDroneInfo().getDroneID() + "]\n");
+
+            this.setDroneInfo(event.getDroneInfo());
+        } catch (Exception e) {
+            System.err.println("Error registering drone with Scheduler: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Creates a new drone.
+     * @param args
+     */
+    public static void main(String[] args) {
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            System.err.println("Unable to retrieve local host: " + e.getMessage());
             System.exit(1);
         }
 

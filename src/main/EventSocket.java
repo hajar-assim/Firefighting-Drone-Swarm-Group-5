@@ -66,4 +66,8 @@ EventSocket {
 
         return event;
     }
+
+    public DatagramSocket getSocket() {
+        return socket;
+    }
 }

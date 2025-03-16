@@ -1,6 +1,7 @@
 package test;
 
 import org.junit.jupiter.api.*;
+import subsystems.drone.DroneInfo;
 import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneDispatchEvent;
 import subsystems.drone.events.DroneUpdateEvent;
@@ -9,6 +10,8 @@ import subsystems.drone.states.DroneState;
 import subsystems.drone.states.IdleState;
 
 import java.awt.geom.Point2D;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,11 +42,17 @@ class EventTests {
     @Test
     @DisplayName("Test DroneUpdateEvent class")
     void testDroneUpdateEvent() {
-        DroneState state = new IdleState();
-        DroneUpdateEvent event = new DroneUpdateEvent(1, state);
+        DroneInfo info = null;
+        try {
+            info = new DroneInfo(InetAddress.getLocalHost(), 2000);
+        } catch (UnknownHostException e){
+            e.printStackTrace();
+        }
+
+        DroneUpdateEvent event = new DroneUpdateEvent(1, info);
 
         assertEquals(1, event.getDroneID());
-        assertEquals(state, event.getDroneState());
+        assertEquals(info, event.getDroneInfo());
 
         assertDoesNotThrow(() -> event.fromString(""));
     }

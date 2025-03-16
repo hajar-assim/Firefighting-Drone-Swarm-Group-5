@@ -2,6 +2,8 @@ package subsystems.drone.events;
 
 import subsystems.Event;
 
+import java.time.LocalDateTime;
+
 /**
  * Represents an event where a drone drops an extinguishing agent.
  */
@@ -16,7 +18,7 @@ public class DropAgentEvent extends Event {
      * @param volume the amount of agent dropped
      */
     public DropAgentEvent(int volume) {
-        super(null);
+        super(LocalDateTime.now().toString());
         this.volume = volume;
         this.droneID = -1; // Default value indicating no specific drone ID
     }
