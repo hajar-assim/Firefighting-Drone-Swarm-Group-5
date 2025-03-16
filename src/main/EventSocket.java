@@ -49,7 +49,7 @@ public class EventSocket {
             socket.receive(packet);
 
             // Deserialize object
-            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data, 0, packet.getLength());
             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
             event = (Event) objectInputStream.readObject();
         } catch (Exception e){
