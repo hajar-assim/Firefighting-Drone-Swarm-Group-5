@@ -124,7 +124,7 @@ public class Scheduler {
      *
      * @param event The IncidentEvent containing fire incident data.
      */
-    private void handleIncidentEvent(IncidentEvent event) {
+    public void handleIncidentEvent(IncidentEvent event) {
 
         if (event.getEventType() == EventType.EVENTS_DONE) {
             System.out.println("\n[SCHEDULER] Received EVENTS_DONE.");
@@ -315,7 +315,7 @@ public class Scheduler {
      *
      * @param event The DroneUpdateEvent containing the updated drone details.
      */
-    private void handleDroneUpdate(DroneUpdateEvent event) {
+    public void handleDroneUpdate(DroneUpdateEvent event) {
         int droneID = event.getDroneID();
 
         // If the drone ID is -1, it's a new drone requesting registration
@@ -341,6 +341,11 @@ public class Scheduler {
             System.out.println("[SCHEDULER] Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName());
         }
 
+    }
+
+    public void close() {
+        if (receiveSocket != null) receiveSocket.close();
+        if (sendSocket != null) sendSocket.close();
     }
 
     /**
