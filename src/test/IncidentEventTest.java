@@ -1,6 +1,7 @@
 package test;
 
 import subsystems.EventType;
+import subsystems.fire_incident.events.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.events.Severity;
 import org.junit.jupiter.api.*;
@@ -13,7 +14,7 @@ class IncidentEventTest {
 
     @BeforeEach
     void setUp() {
-        incidentEvent = new IncidentEvent("14:03:15", 1, EventType.FIRE_DETECTED, Severity.HIGH);
+        incidentEvent = new IncidentEvent("14:03:15", 1, EventType.FIRE_DETECTED, Severity.HIGH, Faults.NONE); // Faults is none for now, we'll change it as needed
     }
 
     @Test

@@ -2,6 +2,7 @@ package subsystems.fire_incident;
 
 import main.EventSocket;
 import subsystems.EventType;
+import subsystems.fire_incident.events.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.events.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
@@ -78,8 +79,23 @@ public class FireIncidentSubsystem {
                 String[] parts = line.split(",");
                 int zoneId = Integer.parseInt(parts[1]);
 
-                IncidentEvent incident = new IncidentEvent(parts[0], zoneId, EventType.fromString(parts[2]), Severity.fromString(parts[3]));
+                // Parse from data file
+                String timestamp = parts[0];
+                EventType eventType = EventType.fromString(parts[2]);
+                Severity severity = Severity.fromString(parts[3]);
+                Faults fault;
+
+                try {
+                    fault = Faults.fromString(parts[4]);
+                } catch (IllegalArgumentException e) {
+                    System.out.println("[FIRE INCIDENT SYSTEM] Invalid fault type '" + parts[4] + "', defaulting to fault type NONE.");
+                    fault = Faults.NONE;
+                }
+
+                // Create IncidentEvent with injected fault
+                IncidentEvent incident = new IncidentEvent(timestamp, zoneId, eventType, severity, fault);
                 System.out.println("\n[FIRE INCIDENT SYSTEM] New incident detected: {" + incident + "}");
+
                 socket.send(incident, schedulerAddress, schedulerPort);
                 activeFires.add(zoneId);
             }
@@ -90,7 +106,6 @@ public class FireIncidentSubsystem {
             e.printStackTrace();
         }
     }
-
 
     /**
      * Parses the zone file and stores zone data in a hashmap.
@@ -156,7 +171,7 @@ public class FireIncidentSubsystem {
         waitForFiresToBeExtinguished();
 
         // only send EVENTS_DONE once all fires are extinguished
-        IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE);
+        IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE, Faults.NONE);
         System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
         socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 

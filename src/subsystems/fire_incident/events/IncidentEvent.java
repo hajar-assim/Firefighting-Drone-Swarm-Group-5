@@ -2,6 +2,7 @@ package subsystems.fire_incident.events;
 
 import subsystems.Event;
 import subsystems.EventType;
+import subsystems.fire_incident.events.Faults;
 
 /**
  * Represents an incident event, including details such as timestamp, zone ID, event type, and severity.
@@ -11,6 +12,7 @@ public class IncidentEvent extends Event {
     private Severity severity;
     private int zoneID;
     private int waterFoamAmount;
+    private Faults fault;
 
     /**
      * Constructs an IncidentEvent object.
@@ -20,12 +22,13 @@ public class IncidentEvent extends Event {
      * @param eventType   The type of event occurring (e.g., "FIRE_DETECTED", "FIRE_EXTINGUISHED").
      * @param severity    The severity of the incident (e.g., "LOW", "MODERATE", "HIGH").
      */
-    public IncidentEvent(String timestamp, int zoneID, EventType eventType, Severity severity) {
+    public IncidentEvent(String timestamp, int zoneID, EventType eventType, Severity severity, Faults fault) {
         super(timestamp);
         this.eventType = eventType;
         this.severity = severity;
         this.zoneID = zoneID;
         this.waterFoamAmount = severity.getWaterFoamAmount();
+        this.fault = fault;
     }
 
     /**
@@ -97,8 +100,8 @@ public class IncidentEvent extends Event {
     @Override
     public String toString() {
         return String.format(
-                "Time: %s | Zone: %d | Type: %s | Severity: %s",
-                this.getTimeStamp(), this.zoneID, this.eventType, this.severity
+                "Time: %s | Zone: %d | Type: %s | Severity: %s | Fault: %s",
+                this.getTimeStamp(), this.zoneID, this.eventType, this.severity, this.fault
         );
     }
 
@@ -109,5 +112,13 @@ public class IncidentEvent extends Event {
     @Override
     public void fromString(String s) {
         // Implement parsing logic if necessary
+    }
+
+    public Faults getFault() {
+        return fault;
+    }
+
+    public void setFault(Faults fault) {
+        this.fault = fault;
     }
 }

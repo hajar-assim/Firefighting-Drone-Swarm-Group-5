@@ -4,6 +4,7 @@ import main.EventSocket;
 import org.junit.jupiter.api.*;
 import subsystems.EventType;
 import subsystems.fire_incident.FireIncidentSubsystem;
+import subsystems.fire_incident.events.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.events.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
@@ -101,6 +102,7 @@ class FireIncidentSubsystemTest {
             // Receive incident event
             IncidentEvent incident = (IncidentEvent) schedulerSocket.receive();
             Severity originalSeverity = incident.getSeverity();
+            Faults originalFault = incident.getFault();
 
             assertEquals(zoneId, incident.getZoneID());
             assertEquals(expectedSeverities[zoneId], originalSeverity);
@@ -110,13 +112,13 @@ class FireIncidentSubsystemTest {
 
             // Send DRONE_DISPATCHED with original severity
             IncidentEvent dispatchedEvent = new IncidentEvent(
-                    "", zoneId, EventType.DRONE_DISPATCHED, originalSeverity
+                    "", zoneId, EventType.DRONE_DISPATCHED, originalSeverity, originalFault
             );
             responseSender.send(dispatchedEvent, InetAddress.getLocalHost(), SUBSYSTEM_RECEIVE_PORT);
 
             // Send FIRE_EXTINGUISHED with original severity
             IncidentEvent extinguishedEvent = new IncidentEvent(
-                    "", zoneId, EventType.FIRE_EXTINGUISHED, originalSeverity
+                    "", zoneId, EventType.FIRE_EXTINGUISHED, originalSeverity, originalFault
             );
             responseSender.send(extinguishedEvent, InetAddress.getLocalHost(), SUBSYSTEM_RECEIVE_PORT);
         }
