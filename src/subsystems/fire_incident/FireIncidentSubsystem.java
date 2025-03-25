@@ -2,9 +2,7 @@ package subsystems.fire_incident;
 
 import main.EventSocket;
 import subsystems.EventType;
-import subsystems.fire_incident.events.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
-import subsystems.fire_incident.events.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
 
 import java.awt.geom.Point2D;

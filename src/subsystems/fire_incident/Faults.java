@@ -1,4 +1,4 @@
-package subsystems.fire_incident.events;
+package subsystems.fire_incident;
 
 /**
  * The faults a drone can experience
