@@ -7,6 +7,7 @@ import subsystems.drone.DroneSubsystem;
 import subsystems.drone.events.*;
 import subsystems.drone.states.DroneState;
 import subsystems.drone.states.IdleState;
+import subsystems.fire_incident.events.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.events.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
@@ -298,7 +299,7 @@ public class Scheduler {
         if (remainingWater <= 0) {
             droneAssignments.remove(droneID);
             // notify FireIncidentSubSystem that the fire has been put out
-            IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE);
+            IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
             sendSocket.send(fireOutEvent, fireSubsystemAddress, fireSubsystemPort);
         } else {
             // Otherwise update remaining water and put incident in buffer

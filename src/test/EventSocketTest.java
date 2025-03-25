@@ -4,6 +4,7 @@ import main.EventSocket;
 import org.junit.jupiter.api.*;
 import subsystems.Event;
 import subsystems.EventType;
+import subsystems.fire_incident.events.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.events.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
@@ -44,7 +45,8 @@ class EventSocketTest {
         // Creating an IncidentEvent
         EventType testEventType = EventType.FIRE_DETECTED; // Replace with valid enum value
         Severity testSeverity = Severity.HIGH; // Replace with valid enum value
-        IncidentEvent sentEvent = new IncidentEvent("2025-03-15T10:30:00", 5, testEventType, testSeverity);
+        Faults testFault = Faults.NONE; // For now
+        IncidentEvent sentEvent = new IncidentEvent("2025-03-15T10:30:00", 5, testEventType, testSeverity, testFault);
 
         // Send event in a separate thread to prevent blocking
         new Thread(() -> sender.send(sentEvent, localAddress, TEST_PORT)).start();
