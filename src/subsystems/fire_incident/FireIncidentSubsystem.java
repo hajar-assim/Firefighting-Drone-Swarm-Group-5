@@ -2,9 +2,7 @@ package subsystems.fire_incident;
 
 import main.EventSocket;
 import subsystems.EventType;
-import subsystems.fire_incident.events.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
-import subsystems.fire_incident.events.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
 
 import java.awt.geom.Point2D;
@@ -77,6 +75,10 @@ public class FireIncidentSubsystem {
 
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
+                if (parts.length == 0) {
+                    System.err.println("[FIRE INCIDENT SYSTEM] Invalid event data: " + line);
+                }
+
                 int zoneId = Integer.parseInt(parts[1]);
 
                 // Parse from data file

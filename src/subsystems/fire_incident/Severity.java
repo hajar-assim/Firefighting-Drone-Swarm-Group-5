@@ -1,4 +1,4 @@
-package subsystems.fire_incident.events;
+package subsystems.fire_incident;
 
 /**
  * Severity represents the level of severity for a fire incident.

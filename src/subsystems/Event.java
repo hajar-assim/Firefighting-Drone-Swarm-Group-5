@@ -1,6 +1,9 @@
 package subsystems;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Represents an abstract event with a timestamp.
@@ -28,6 +31,44 @@ public abstract class Event implements Serializable {
         return this.timeStamp;
     }
 
+    /**
+     * Sets the timestamp of the event.
+     *
+     * @param timeStamp the new timestamp
+     */
+    public void setTimeStamp(String timeStamp) {
+        this.timeStamp = timeStamp;
+    }
+
+    /**
+     * Gets the date of the event.
+     *
+     * @return the date as a string
+     */
+    public String getDate() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        return LocalDateTime.parse(this.getTimeStamp(), DateTimeFormatter.ISO_LOCAL_DATE_TIME).format(formatter);
+    }
+
+    /**
+     * Gets the time of the event.
+     *
+     * @return the time as a string
+     */
+    public String getTime() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+        return LocalDateTime.parse(this.getTimeStamp(), DateTimeFormatter.ISO_LOCAL_DATE_TIME).format(formatter);
+    }
+
+    /**
+     * Gets the time of the event as a LocalTime object.
+     *
+     * @return the time as a LocalTime object
+     */
+    public LocalTime getParsedTime() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+        return LocalTime.parse(this.getTimeStamp(), formatter);
+    }
 
     /**
      * Returns a string representation of the event.

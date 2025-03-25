@@ -1,5 +1,6 @@
 package main;
 
+import helpers.IncidentEventComparator;
 import subsystems.Event;
 import subsystems.EventType;
 import subsystems.drone.DroneInfo;
@@ -7,18 +8,15 @@ import subsystems.drone.DroneSubsystem;
 import subsystems.drone.events.*;
 import subsystems.drone.states.DroneState;
 import subsystems.drone.states.IdleState;
-import subsystems.fire_incident.events.Faults;
+import subsystems.fire_incident.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
-import subsystems.fire_incident.events.Severity;
+import subsystems.fire_incident.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
 
 import java.awt.geom.Point2D;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Scheduler {
@@ -32,7 +30,7 @@ public class Scheduler {
     private final int fireSubsystemPort;
     private final Map<Integer, DroneInfo> dronesInfo;
     private volatile boolean running = true;
-    private final Queue<IncidentEvent> unassignedIncidents;
+    private final PriorityQueue<IncidentEvent> unassignedIncidents;
 
     /**
      * Constructor initializes event managers and HashMaps.
@@ -45,7 +43,7 @@ public class Scheduler {
         this.fireSubsystemAddress = fireSubsystemAddress;
         this.fireSubsystemPort = fireSubsystemPort;
         this.dronesInfo = new HashMap<>();
-        this.unassignedIncidents = new LinkedList<>();
+        this.unassignedIncidents = new PriorityQueue<>(new IncidentEventComparator());
     }
 
     /**

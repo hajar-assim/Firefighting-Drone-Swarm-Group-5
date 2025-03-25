@@ -1,20 +1,13 @@
 package test;
 
 import main.Scheduler;
-import main.EventSocket;
 import org.junit.jupiter.api.*;
-import subsystems.fire_incident.events.IncidentEvent;
-import subsystems.fire_incident.events.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
-import subsystems.EventType;
 import subsystems.drone.DroneInfo;
-import subsystems.drone.events.DroneArrivedEvent;
-import subsystems.drone.events.DropAgentEvent;
 
 import java.awt.geom.Point2D;
 import java.net.InetAddress;
 import java.util.Map;
-import java.util.Queue;
 import java.util.HashMap;
 
 

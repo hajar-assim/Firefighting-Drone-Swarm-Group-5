@@ -2,7 +2,8 @@ package subsystems.fire_incident.events;
 
 import subsystems.Event;
 import subsystems.EventType;
-import subsystems.fire_incident.events.Faults;
+import subsystems.fire_incident.Faults;
+import subsystems.fire_incident.Severity;
 
 /**
  * Represents an incident event, including details such as timestamp, zone ID, event type, and severity.

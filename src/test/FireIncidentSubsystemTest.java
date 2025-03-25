@@ -4,15 +4,14 @@ import main.EventSocket;
 import org.junit.jupiter.api.*;
 import subsystems.EventType;
 import subsystems.fire_incident.FireIncidentSubsystem;
-import subsystems.fire_incident.events.Faults;
+import subsystems.fire_incident.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
-import subsystems.fire_incident.events.Severity;
+import subsystems.fire_incident.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
