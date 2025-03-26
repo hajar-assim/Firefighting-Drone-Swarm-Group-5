@@ -39,6 +39,34 @@ class EventSocketTest {
         receiver = null;
     }
 
+    @Test
+    void testSendAndReceiveIncidentEventNozzleJammed() {
+        // Creating an IncidentEvent
+        EventType testEventType = EventType.FIRE_DETECTED; // Replace with valid enum value
+        Severity testSeverity = Severity.HIGH; // Replace with valid enum value
+        Faults testFault = Faults.NOZZLE_JAMMED; // For now
+        IncidentEvent sentEvent = new IncidentEvent("2025-03-15T10:30:00", 5, testEventType, testSeverity, testFault);
+
+        // Send event in a separate thread to prevent blocking
+        new Thread(() -> sender.send(sentEvent, localAddress, TEST_PORT)).start();
+
+        // Receive the event
+        Event receivedEvent = receiver.receive();
+
+        // Assertions to verify event transmission
+        assertNotNull(receivedEvent, "Received event should not be null");
+        assertTrue(receivedEvent instanceof IncidentEvent, "Received event should be an instance of IncidentEvent");
+
+        // Cast to IncidentEvent to access properties
+        IncidentEvent receivedIncident = (IncidentEvent) receivedEvent;
+
+        assertEquals(sentEvent.getTimeStamp(), receivedIncident.getTimeStamp(), "Timestamps should match");
+        assertEquals(sentEvent.getZoneID(), receivedIncident.getZoneID(), "Zone IDs should match");
+        assertEquals(sentEvent.getEventType(), receivedIncident.getEventType(), "Event types should match");
+        assertEquals(sentEvent.getSeverity(), receivedIncident.getSeverity(), "Severities should match");
+        assertEquals(sentEvent.getFault(), receivedIncident.getFault(), "Faults should match");
+    }
+
 
     @Test
     void testSendAndReceiveIncidentEvent() {

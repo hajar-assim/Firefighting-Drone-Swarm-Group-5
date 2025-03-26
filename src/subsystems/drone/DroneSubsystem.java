@@ -7,6 +7,8 @@ import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.states.DroneState;
+import subsystems.fire_incident.Faults;
+import subsystems.fire_incident.events.IncidentEvent;
 
 import java.awt.geom.Point2D;
 import java.net.InetAddress;
@@ -22,6 +24,7 @@ public class DroneSubsystem {
     private final InetAddress schedulerAddress;
     private final int schedulerPort;
     public static int DRONE_BATTERY_TIME = 30;
+    private Faults fault;
     DroneInfo info;
 
 
@@ -40,6 +43,7 @@ public class DroneSubsystem {
         }
         this.schedulerAddress = schedulerAddress;
         this.schedulerPort = schedulerPort;
+        fault = Faults.NONE;
     }
 
     /**
@@ -198,9 +202,13 @@ public class DroneSubsystem {
      * @param change the value to subtract to new water level
      */
     public void subtractWaterLevel(int change) {
-        info.setWaterLevel(info.getWaterLevel() - change);
-        DropAgentEvent dropEvent =  new DropAgentEvent(change, getDroneID());
-        socket.send(dropEvent, schedulerAddress, schedulerPort);
+        if (! (fault == Faults.NOZZLE_JAMMED)){
+            info.setWaterLevel(info.getWaterLevel() - change);
+            DropAgentEvent dropEvent = new DropAgentEvent(change, getDroneID());
+            socket.send(dropEvent, schedulerAddress, schedulerPort);
+        } else {
+            EventLogger.info(info.getDroneID(), "Simulating NOZZLE JAM. Not sending DropAgentEvent.");
+        }
     }
 
     /**
@@ -243,6 +251,9 @@ public class DroneSubsystem {
         registerWithScheduler();
         while (getRunning()) {
             Event event = socket.receive();
+            if (event instanceof IncidentEvent incidentEvent) {
+               fault = incidentEvent.getFault();
+            }
             getState().handleEvent(this, event);
         }
         EventLogger.info(getDroneID(), "No more incidents, shutting down...");
