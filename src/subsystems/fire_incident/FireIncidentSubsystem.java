@@ -85,13 +85,13 @@ public class FireIncidentSubsystem {
                 String timestamp = parts[0];
                 EventType eventType = EventType.fromString(parts[2]);
                 Severity severity = Severity.fromString(parts[3]);
-                Faults fault;
+                Fault fault;
 
                 try {
-                    fault = Faults.fromString(parts[4]);
+                    fault = Fault.fromString(parts[4]);
                 } catch (IllegalArgumentException e) {
                     System.out.println("[FIRE INCIDENT SYSTEM] Invalid fault type '" + parts[4] + "', defaulting to fault type NONE.");
-                    fault = Faults.NONE;
+                    fault = Fault.NONE;
                 }
 
                 // Create IncidentEvent with injected fault
@@ -174,7 +174,7 @@ public class FireIncidentSubsystem {
         waitForFiresToBeExtinguished();
 
         // only send EVENTS_DONE once all fires are extinguished
-        IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE, Faults.NONE);
+        IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE, Fault.NONE);
         System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
         socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 

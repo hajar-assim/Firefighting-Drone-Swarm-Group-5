@@ -9,7 +9,7 @@ import subsystems.drone.events.*;
 import subsystems.drone.states.DroneState;
 import subsystems.drone.states.FaultedState;
 import subsystems.drone.states.IdleState;
-import subsystems.fire_incident.Faults;
+import subsystems.fire_incident.Fault;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
@@ -213,7 +213,7 @@ public class Scheduler {
         System.out.println("[SCHEDULER] Assigned drone to waiting fire at Zone " + task.getZoneID());
 
         // Determine if we need to simulate a stuck fault
-        boolean simulateStuck = task.getFault() == Faults.DRONE_STUCK_IN_FLIGHT;
+        boolean simulateStuck = task.getFault() == Fault.DRONE_STUCK_IN_FLIGHT;
 
         // Create dispatch event with the fault flag
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, simulateStuck);
@@ -315,7 +315,7 @@ public class Scheduler {
         if (remainingWater <= 0) {
             droneAssignments.remove(droneID);
             // notify FireIncidentSubSystem that the fire has been put out
-            IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
+            IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Fault.NONE);
             sendSocket.send(fireOutEvent, fireSubsystemAddress, fireSubsystemPort);
         } else {
             // Otherwise update remaining water and put incident in buffer
@@ -365,7 +365,7 @@ public class Scheduler {
     }
 
     /**
-     * Handles a drone that is stuck mid flight.
+     * Handles a drone that is stuck mid-flight.
      * Removes the drone’s current assignment and deadline, and abandons its fire
      *
      * @param droneID The ID of drone declared stuck
@@ -374,15 +374,16 @@ public class Scheduler {
         System.out.println("[SCHEDULER] Drone " + droneID + " missed arrival deadline. Declaring it stuck.");
 
         // Remove assignment and deadline
+        DroneInfo faultedDroneInfo = dronesInfo.get(droneID);
         IncidentEvent stuckIncident = droneAssignments.remove(droneID);
         droneArrivalDeadlines.remove(droneID);
 
         // Abandon the drone's fire
         if (stuckIncident != null) {
-            System.out.println("[SCHEDULER] Abandoning fire at Zone " + stuckIncident.getZoneID() + " due to stuck drone " + droneID);
+            System.out.println("[SCHEDULER] Abandoning fire at Zone " + stuckIncident.getZoneID() + " due to Fault " + faultedDroneInfo.getFault() + " with Drone " + droneID);
 
             // Notify Fire Incident Subsystem that fire is abandoned
-            IncidentEvent abandonedEvent = new IncidentEvent("", stuckIncident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
+            IncidentEvent abandonedEvent = new IncidentEvent("", stuckIncident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Fault.NONE);
             sendSocket.send(abandonedEvent, fireSubsystemAddress, fireSubsystemPort);
         }
     }

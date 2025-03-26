@@ -2,12 +2,12 @@ package subsystems.drone;
 
 import subsystems.drone.states.DroneState;
 import subsystems.drone.states.IdleState;
+import subsystems.fire_incident.Fault;
 import subsystems.fire_incident.FireIncidentSubsystem;
 
 import java.awt.geom.Point2D;
 import java.io.Serializable;
 import java.net.InetAddress;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DroneInfo implements Serializable {
     private int droneID;
@@ -19,6 +19,7 @@ public class DroneInfo implements Serializable {
     private int waterLevel;
     private InetAddress address;
     private Integer port;
+    private Fault fault;
 
 
     /**
@@ -167,7 +168,7 @@ public class DroneInfo implements Serializable {
     }
 
     /**
-     * TODO: javadocs
+     *  Gets the address of the drone.
      */
     public InetAddress getAddress(){
         return this.address;
@@ -175,9 +176,25 @@ public class DroneInfo implements Serializable {
 
 
     /**
-     * TODO: javadocs
+     * Gets the port number associated with the drone.
      */
     public Integer getPort(){
         return this.port;
+    }
+
+    /**
+     * Gets fault.
+     * @return fault
+     */
+    public Fault getFault() {
+        return fault;
+    }
+
+    /**
+     * Sets fault.
+     * @param fault
+     */
+    public void setFault(Fault fault) {
+        this.fault = fault;
     }
 }

@@ -7,6 +7,7 @@ import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.Event;
 import subsystems.drone.DroneSubsystem;
+import subsystems.fire_incident.Fault;
 
 import java.awt.geom.Point2D;
 
@@ -91,7 +92,8 @@ public class OnRouteState implements DroneState {
             System.out.println("[DRONE " + drone.getDroneID() + "] Simulating stuck mid-flight. Not sending arrival event.");
 
             // Transition to FaultedState so that this drone is not available
-            drone.setState(new FaultedState("DRONE_STUCK_IN_FLIGHT"));
+            drone.getDroneInfo().setFault(Fault.DRONE_STUCK_IN_FLIGHT);
+            drone.setState(new FaultedState(Fault.DRONE_STUCK_IN_FLIGHT));
             return;
         }
 

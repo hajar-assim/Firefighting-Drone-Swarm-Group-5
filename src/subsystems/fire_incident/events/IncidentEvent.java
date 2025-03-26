@@ -2,7 +2,7 @@ package subsystems.fire_incident.events;
 
 import subsystems.Event;
 import subsystems.EventType;
-import subsystems.fire_incident.Faults;
+import subsystems.fire_incident.Fault;
 import subsystems.fire_incident.Severity;
 
 /**
@@ -13,7 +13,7 @@ public class IncidentEvent extends Event {
     private Severity severity;
     private int zoneID;
     private int waterFoamAmount;
-    private Faults fault;
+    private Fault fault;
 
     /**
      * Constructs an IncidentEvent object.
@@ -23,7 +23,7 @@ public class IncidentEvent extends Event {
      * @param eventType   The type of event occurring (e.g., "FIRE_DETECTED", "FIRE_EXTINGUISHED").
      * @param severity    The severity of the incident (e.g., "LOW", "MODERATE", "HIGH").
      */
-    public IncidentEvent(String timestamp, int zoneID, EventType eventType, Severity severity, Faults fault) {
+    public IncidentEvent(String timestamp, int zoneID, EventType eventType, Severity severity, Fault fault) {
         super(timestamp);
         this.eventType = eventType;
         this.severity = severity;
@@ -115,11 +115,11 @@ public class IncidentEvent extends Event {
         // Implement parsing logic if necessary
     }
 
-    public Faults getFault() {
+    public Fault getFault() {
         return fault;
     }
 
-    public void setFault(Faults fault) {
+    public void setFault(Fault fault) {
         this.fault = fault;
     }
 }

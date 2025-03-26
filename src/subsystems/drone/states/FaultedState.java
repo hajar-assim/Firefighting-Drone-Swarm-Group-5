@@ -4,17 +4,18 @@ import subsystems.Event;
 import subsystems.drone.DroneSubsystem;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.events.DroneDispatchEvent;
+import subsystems.fire_incident.Fault;
 
 public class FaultedState implements DroneState {
-    private final String faultDescription;
+    private final Fault fault;
 
     /**
      * Constructs a new FaultedState with a human‑readable description of the fault.
      *
-     * @param faultDescription a description of why the drone is faulted
+     * @param fault the fault type
      */
-    public FaultedState(String faultDescription) {
-        this.faultDescription = faultDescription;
+    public FaultedState(Fault fault) {
+        this.fault = fault;
     }
 
     /**
@@ -36,7 +37,7 @@ public class FaultedState implements DroneState {
      */
     @Override
     public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot dispatch, drone is faulted (" + faultDescription + ").");
+        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot dispatch, drone is faulted (" + fault + ").");
     }
 
     /**
@@ -46,7 +47,7 @@ public class FaultedState implements DroneState {
      */
     @Override
     public void travel(DroneSubsystem drone) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot travel, drone is faulted (" + faultDescription + ").");
+        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot travel, drone is faulted (" + fault + ").");
     }
 
     /**
@@ -57,7 +58,7 @@ public class FaultedState implements DroneState {
      */
     @Override
     public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot drop agent, drone is faulted (" + faultDescription + ").");
+        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot drop agent, drone is faulted (" + fault + ").");
     }
 
     /**
@@ -67,6 +68,6 @@ public class FaultedState implements DroneState {
      */
     @Override
     public String toString() {
-        return "FaultedState: " + faultDescription;
+        return "FaultedState: " + fault;
     }
 }
