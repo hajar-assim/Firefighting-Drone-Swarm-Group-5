@@ -1,5 +1,6 @@
 package subsystems.drone.states;
 
+import logger.EventLogger;
 import main.Scheduler;
 import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneDispatchEvent;
@@ -30,14 +31,14 @@ public class OnRouteState implements DroneState {
     @Override
     public void handleEvent(DroneSubsystem drone, Event event) {
         if (event instanceof DroneDispatchEvent) {
-            System.out.println("[DRONE " + drone.getDroneID() + "] Redirecting to a new target zone.");
+            EventLogger.info(drone.getDroneID(), "Redirecting to a new target zone.");
             dispatch(drone, (DroneDispatchEvent) event);
         } else if (event instanceof DropAgentEvent dropAgentEvent) {
-            System.out.println("[DRONE " + drone.getDroneID() + "] Received order to drop " + dropAgentEvent.getVolume() + "L of water.");
+            EventLogger.info(drone.getDroneID(), "Received order to drop " + dropAgentEvent.getVolume() + "L of water.");
             drone.setState(new DroppingAgentState());
             drone.getState().handleEvent(drone, dropAgentEvent);
         } else {
-            System.out.println("[DRONE " + drone.getDroneID() + "] Ignoring event while in transit.");
+            EventLogger.warn(drone.getDroneID(), "Ignoring event while in transit.");
         }
     }
 
@@ -59,7 +60,7 @@ public class OnRouteState implements DroneState {
      */
     @Override
     public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Already in transit, cannot dispatch.");
+        EventLogger.warn(drone.getDroneID(), "Cannot dispatch while on route.");
     }
 
 
@@ -78,8 +79,8 @@ public class OnRouteState implements DroneState {
         boolean returningToBase = dispatchEvent.getZoneID() == 0;
         String onRoute = returningToBase ? "Base" : "Zone: " + drone.getZoneID();
 
-        System.out.println("\n[DRONE " + drone.getDroneID() + "] On route to " + onRoute
-                + " | Estimated time: " + String.format("%.2f seconds", flightTime));
+        EventLogger.info(drone.getDroneID(), String.format("On route to " + onRoute
+                + " | Estimated time: " + String.format("%.2f seconds", flightTime)));
 
         // simulate flight time
         try {
@@ -89,7 +90,7 @@ public class OnRouteState implements DroneState {
         }
 
         drone.setCoordinates(targetCoords);
-        System.out.println("[DRONE " + drone.getDroneID() + "] Arrived at " + onRoute);
+        EventLogger.info(drone.getDroneID(), "Arrived at " + onRoute);
 
         if (returningToBase) {
             refill(drone);
@@ -105,7 +106,7 @@ public class OnRouteState implements DroneState {
      */
     @Override
     public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot drop agent while in transit.");
+        EventLogger.warn(drone.getDroneID(), "Cannot drop agent while in transit.");
     }
 
 
@@ -119,11 +120,11 @@ public class OnRouteState implements DroneState {
         // reset water level and flight time
         drone.setWaterLevel(15);
         drone.setFlightTime(10 * 60);
-        System.out.println("[DRONE " + drone.getDroneID() + "] Refilled to " + drone.getWaterLevel() + " liters.");
+        EventLogger.info(drone.getDroneID(), "Refilled to " + drone.getWaterLevel() + " liters.");
 
         // transition back to IdleState
         IdleState idleState = new IdleState();
-        System.out.println("[DRONE " + drone.getDroneID() + "] Now idle and ready for dispatch.");
+        EventLogger.info(drone.getDroneID(), "Now idle and ready for dispatch.\n");
         drone.setState(idleState);
     }
 }

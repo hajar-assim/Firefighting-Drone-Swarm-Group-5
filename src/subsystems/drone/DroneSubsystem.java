@@ -1,5 +1,6 @@
 package subsystems.drone;
 
+import logger.EventLogger;
 import main.EventSocket;
 import subsystems.Event;
 import subsystems.drone.events.DroneArrivedEvent;
@@ -244,7 +245,7 @@ public class DroneSubsystem {
             Event event = socket.receive();
             getState().handleEvent(this, event);
         }
-        System.out.println("[Drone " + this.getDroneID() + "] No more incidents, shutting down...");
+        EventLogger.info(getDroneID(), "No more incidents, shutting down...");
         socket.getSocket().close();
     }
 
@@ -272,14 +273,12 @@ public class DroneSubsystem {
         try {
             DroneUpdateEvent event = new DroneUpdateEvent(-1, this.info);
             socket.send(event, schedulerAddress, schedulerPort);
-            System.out.println("[DRONE] Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort());
-
+            EventLogger.info(-1, "Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort());
             event = (DroneUpdateEvent) socket.receive();
-            System.out.println("[Drone received registration approval from scheduler. Assigned Drone ID: " + event.getDroneInfo().getDroneID() + "]\n");
-
+            EventLogger.info(event.getDroneInfo().getDroneID(), "Drone registered with Scheduler as Drone " + event.getDroneInfo().getDroneID() + ".\n");
             this.setDroneInfo(event.getDroneInfo());
         } catch (Exception e) {
-            System.err.println("Error registering drone with Scheduler: " + e.getMessage());
+            EventLogger.error(-1, "Error registering drone with Scheduler: " + e.getMessage());
         }
     }
 
@@ -292,7 +291,7 @@ public class DroneSubsystem {
         try{
             address = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
-            System.err.println("Unable to retrieve local host: " + e.getMessage());
+            EventLogger.error(-1, "Unable to retrieve local host: " + e.getMessage());
             System.exit(1);
         }
 
