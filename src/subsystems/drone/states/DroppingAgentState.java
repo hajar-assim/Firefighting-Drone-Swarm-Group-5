@@ -81,7 +81,7 @@ public class DroppingAgentState implements DroneState {
         // transition to On route and Refill
         System.out.println("[DRONE " + drone.getDroneID() + "] Returning to base to refill.");
 
-        OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0,0)));
+        OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0,0), false));
         drone.setZoneID(0);
         drone.setState(toBase);
         drone.getState().travel(drone);

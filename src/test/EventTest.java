@@ -32,7 +32,7 @@ class EventTests {
     @DisplayName("Test DroneDispatchEvent class")
     void testDroneDispatchEvent() {
         Point2D coords = new Point2D.Double(100.0, 200.0);
-        DroneDispatchEvent event = new DroneDispatchEvent(200, coords);
+        DroneDispatchEvent event = new DroneDispatchEvent(200, coords, false);
         assertEquals(200, event.getZoneID());
         assertEquals(coords, event.getCoords());
         event.fromString("");

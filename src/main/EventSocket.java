@@ -50,17 +50,16 @@ EventSocket {
      * @param port The port to send the event to.
      */
     public void send(Event event, InetAddress address, int port) {
-        // Serialize event
-        try{
+        try {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
             objectOutputStream.writeObject(event);
-            byte msg[] = byteArrayOutputStream.toByteArray();
+            objectOutputStream.flush(); // Ensure data is flushed
+            byte[] msg = byteArrayOutputStream.toByteArray();
 
             DatagramPacket packet = new DatagramPacket(msg, msg.length, address, port);
-
             socket.send(packet);
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -73,22 +72,26 @@ EventSocket {
     public Event receive() {
         byte data[] = new byte[1000];
         DatagramPacket packet = new DatagramPacket(data, data.length);
-
-        Event event = null;
-
-        try{
+        try {
             socket.receive(packet);
-
-            // Deserialize object
-            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
+            int length = packet.getLength();
+            if (length == 0) {
+                System.err.println("[EventSocket] Received an empty packet.");
+                return null;
+            }
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data, 0, length);
             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
-            event = (Event) objectInputStream.readObject();
-        } catch (Exception e){
+            Event event = (Event) objectInputStream.readObject();
+            return event;
+        } catch (EOFException e) {
+            System.err.println("[EventSocket] EOFException during receive: " + e.getMessage());
+            return null;
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+            return null;
         }
-
-        return event;
     }
+
 
     /**
      * Retrieves the DatagramSocket associated with this EventSocket.
