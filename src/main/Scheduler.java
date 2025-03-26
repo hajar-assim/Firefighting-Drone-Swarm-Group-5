@@ -205,7 +205,7 @@ public class Scheduler {
         // send dispatch event to the drone
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter);
         EventLogger.info(EventLogger.NO_ID,
-                String.format("[SCHEDULER] Dispatching Drone %d to Zone %d | Coordinates: (%.1f, %.1f)%n",
+                String.format("Dispatching Drone %d to Zone %d | Coordinates: (%.1f, %.1f)%n",
                 droneID,
                 zoneID,
                 fireZoneCenter.getX(),
