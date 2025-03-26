@@ -70,7 +70,7 @@ EventSocket {
      * @return The received event, or null if there was an error during reception.
      */
     public Event receive() {
-        byte data[] = new byte[1000];
+        byte[] data = new byte[4096];
         DatagramPacket packet = new DatagramPacket(data, data.length);
         try {
             socket.receive(packet);
@@ -79,12 +79,13 @@ EventSocket {
                 System.err.println("[EventSocket] Received an empty packet.");
                 return null;
             }
-            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data, 0, length);
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data, 0, packet.getLength());
             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
             Event event = (Event) objectInputStream.readObject();
             return event;
         } catch (EOFException e) {
             System.err.println("[EventSocket] EOFException during receive: " + e.getMessage());
+            e.printStackTrace();
             return null;
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
