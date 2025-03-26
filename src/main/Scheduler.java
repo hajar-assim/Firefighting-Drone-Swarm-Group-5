@@ -252,9 +252,12 @@ public class Scheduler {
      */
     private int findAvailableDrone(Point2D fireZoneCenter) {
         for (int droneID : dronesInfo.keySet()) {
-            DroneState droneState = dronesInfo.get(droneID).getState();
+            DroneInfo droneInfo = dronesInfo.get(droneID);
+            DroneState droneState = droneInfo.getState();
 
-            if (droneState == null) {
+
+
+            if (droneState == null || droneInfo.isFaulted()) {
                 continue; // skip drones without a valid state
             }
 
@@ -352,6 +355,12 @@ public class Scheduler {
         // getting drone state
         DroneState currentState = drone.getState();
         System.out.println("\n[SCHEDULER] Received update: Drone " + droneID + " is now in state " + currentState.getClass().getSimpleName());
+
+        if(drone.getWaterLevel() <= 0 || drone.getFlightTime() <=0){
+            drone.setStatus(DroneInfo.DroneStatus.FAULTED);
+            System.out.println("[SCHEDULER] Drone " + droneID + " marked as FAULTED due to low water or flight time.");
+            return;
+        }
 
         // attempt to reassign drone if idle
         if (currentState instanceof IdleState) {

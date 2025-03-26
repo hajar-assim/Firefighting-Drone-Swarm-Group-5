@@ -17,6 +17,7 @@ public class DroneInfo implements Serializable {
     private Point2D coordinates;
     private double flightTime;
     private int waterLevel;
+    private  DroneStatus status = DroneStatus.OPERATIONAL;
 
     public DroneInfo(){
         this.droneID = nextId.getAndIncrement();
@@ -26,6 +27,19 @@ public class DroneInfo implements Serializable {
         this.coordinates = FireIncidentSubsystem.BASE_COORDINATES;
         this.flightTime = 10 * 60;
         this.waterLevel = 15;
+    }
+
+    public enum DroneStatus{
+        OPERATIONAL,
+        FAULTED
+    }
+
+    public void setStatus(DroneStatus status){
+        this.status = status;
+    }
+
+    public boolean isFaulted(){
+        return this.status == DroneStatus.FAULTED;
     }
 
     /**
