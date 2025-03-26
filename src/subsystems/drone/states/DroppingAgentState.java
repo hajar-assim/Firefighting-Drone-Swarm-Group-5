@@ -1,5 +1,6 @@
 package subsystems.drone.states;
 
+import logger.EventLogger;
 import main.Scheduler;
 import subsystems.Event;
 import subsystems.drone.events.DroneDispatchEvent;
@@ -39,7 +40,7 @@ public class DroppingAgentState implements DroneState {
      */
     @Override
     public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot dispatch while dropping agent.");
+        EventLogger.warn(drone.getDroneID(), "Cannot dispatch while dropping agent.");
     }
 
 
@@ -51,7 +52,7 @@ public class DroppingAgentState implements DroneState {
      */
     @Override
     public void travel(DroneSubsystem drone) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot travel while dropping agent.");
+        EventLogger.warn(drone.getDroneID(), "Cannot travel while dropping agent.");
     }
 
 
@@ -65,7 +66,7 @@ public class DroppingAgentState implements DroneState {
      */
     @Override
     public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Dropping agent...");
+        EventLogger.info(drone.getDroneID(), "Dropping agent...");
 
         int volume = event.getVolume();
         try {
@@ -76,10 +77,10 @@ public class DroppingAgentState implements DroneState {
 
         drone.subtractWaterLevel(volume);
 
-        System.out.println("[DRONE " + drone.getDroneID() + "] Dropped " + volume + " liters.");
+        EventLogger.info(drone.getDroneID(), "Dropped " + volume + " liters.");
 
         // transition to On route and Refill
-        System.out.println("[DRONE " + drone.getDroneID() + "] Returning to base to refill.");
+        EventLogger.info(drone.getDroneID(), "Returning to base to refill.");
 
         OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0,0), false));
         drone.setZoneID(0);
