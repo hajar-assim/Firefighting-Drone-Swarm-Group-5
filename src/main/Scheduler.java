@@ -241,7 +241,7 @@ public class Scheduler {
             DroneInfo droneInfo = dronesInfo.get(droneID);
             DroneState droneState = dronesInfo.get(droneID).getState();
 
-            if (droneState == null) {
+            if (droneState == null || droneInfo.isFaulted()) {
                 continue; // skip drones without a valid state
             }
 
@@ -334,6 +334,18 @@ public class Scheduler {
             if (drone.getState() == null) {
                 EventLogger.warn(EventLogger.NO_ID, "Drone " + droneID + " has no valid state.");
                 return;
+            }
+
+            if(drone.getWaterLevel() <= 0 || drone.getFlightTime() <= 0){
+                if(!drone.isFaulted()){
+                    drone.setStatus(DroneInfo.DroneStatus.FAULTED);
+                    EventLogger.warn(EventLogger.NO_ID, "Drone " + droneID + " marked as FAULTED (reason: Low water or battery)");
+                }
+                return;
+            }
+            if (drone.isFaulted()){
+                drone.setStatus(DroneInfo.DroneStatus.OPERATIONAL);
+                EventLogger.info(EventLogger.NO_ID, "Drone " + droneID + " recovered and is now OPERATIONAL.");
             }
 
             // Log drone update

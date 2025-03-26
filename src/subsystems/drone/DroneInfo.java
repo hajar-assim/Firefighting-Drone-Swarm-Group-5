@@ -19,6 +19,8 @@ public class DroneInfo implements Serializable {
     private int waterLevel;
     private InetAddress address;
     private Integer port;
+    private DroneStatus status = DroneStatus.OPERATIONAL;
+
 
 
     /**
@@ -39,6 +41,18 @@ public class DroneInfo implements Serializable {
         this.waterLevel = 15;
         this.address = address;
         this.port = port;
+    }
+    public enum DroneStatus {
+        OPERATIONAL,
+        FAULTED
+    }
+
+    public void setStatus(DroneStatus status) {
+        this.status = status;
+    }
+
+    public boolean isFaulted() {
+        return this.status == DroneStatus.FAULTED;
     }
 
     /**
