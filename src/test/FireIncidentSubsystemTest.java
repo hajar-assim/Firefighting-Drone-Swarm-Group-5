@@ -4,7 +4,7 @@ import main.EventSocket;
 import org.junit.jupiter.api.*;
 import subsystems.EventType;
 import subsystems.fire_incident.FireIncidentSubsystem;
-import subsystems.fire_incident.Faults;
+import subsystems.fire_incident.Fault;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
@@ -101,7 +101,7 @@ class FireIncidentSubsystemTest {
             // Receive incident event
             IncidentEvent incident = (IncidentEvent) schedulerSocket.receive();
             Severity originalSeverity = incident.getSeverity();
-            Faults originalFault = incident.getFault();
+            Fault originalFault = incident.getFault();
 
             assertEquals(zoneId, incident.getZoneID());
             assertEquals(expectedSeverities[zoneId], originalSeverity);
