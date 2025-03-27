@@ -1,6 +1,7 @@
 package main;
 
 import helpers.IncidentEventComparator;
+import logger.EventLogger;
 import subsystems.Event;
 import subsystems.EventType;
 import subsystems.drone.DroneInfo;
@@ -121,11 +122,12 @@ public class Scheduler {
      */
     private void storeZoneData(ZoneEvent event) {
         fireZones.put(event.getZoneID(), event.getCenter());
-        System.out.printf("[SCHEDULER] Stored fire zone {Zone: %d | Center: (%.1f, %.1f)}%n",
+        EventLogger.info(EventLogger.NO_ID, String.format(
+                "Stored fire zone {Zone: %d | Center: (%.1f, %.1f)}",
                 event.getZoneID(),
                 event.getCenter().getX(),
                 event.getCenter().getY()
-        );
+        ));
     }
 
     /**
@@ -137,7 +139,7 @@ public class Scheduler {
     public void handleIncidentEvent(IncidentEvent event) {
 
         if (event.getEventType() == EventType.EVENTS_DONE) {
-            System.out.println("\n[SCHEDULER] Received EVENTS_DONE.");
+            EventLogger.info(EventLogger.NO_ID, "Received EVENTS_DONE. Dispatching all drones to base and terminating...");
             DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), false);
 
             for (int droneID : this.dronesInfo.keySet()) {
@@ -148,17 +150,16 @@ public class Scheduler {
         }
 
         if (!fireZones.containsKey(event.getZoneID())) {
-            System.out.println("[SCHEDULER] Error: Fire zone center not found for Zone " + event.getZoneID());
+            EventLogger.error(EventLogger.NO_ID, "Fire zone center not found for Zone " + event.getZoneID());
             return;
         }
 
-        System.out.println("\n[SCHEDULER] New fire incident at Zone " + event.getZoneID() + ". Requires " + event.getWaterFoamAmount() + "L of water.");
-
+        EventLogger.info(EventLogger.NO_ID,"New fire incident at Zone " + event.getZoneID() + ". Requires " + event.getWaterFoamAmount() + "L of water.");
         if (assignDrone(event)) {
             event.setEventType(EventType.DRONE_DISPATCHED);
             sendSocket.send(event, fireSubsystemAddress, fireSubsystemPort);
         } else {
-            System.out.println("[SCHEDULER] No drones available for fire at zone " + event.getZoneID() + ", added to unassigned incident buffer for assignment when drone is available");
+            EventLogger.info(EventLogger.NO_ID, "No drones available for fire at zone " + event.getZoneID() + ", added to unassigned incident buffer for assignment when drone is available\n");
             // Add to buffer of unassigned incidents
             unassignedIncidents.add(event);
         }
@@ -210,14 +211,19 @@ public class Scheduler {
 
         // track drone assignment
         droneAssignments.put(droneID, task);
-        System.out.println("[SCHEDULER] Assigned drone to waiting fire at Zone " + task.getZoneID());
+        EventLogger.info(EventLogger.NO_ID, "Assigned drone to waiting fire at Zone " + task.getZoneID());
 
         // Determine if we need to simulate a stuck fault
         boolean simulateStuck = task.getFault() == Faults.DRONE_STUCK_IN_FLIGHT;
 
         // Create dispatch event with the fault flag
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, simulateStuck);
-        System.out.printf("[SCHEDULER] Dispatching Drone %d to Zone %d | Coordinates: (%.1f, %.1f)%n", droneID, zoneID, fireZoneCenter.getX(), fireZoneCenter.getY());
+        EventLogger.info(EventLogger.NO_ID,
+                String.format("Dispatching Drone %d to Zone %d | Coordinates: (%.1f, %.1f)%n",
+                        droneID,
+                        zoneID,
+                        fireZoneCenter.getX(),
+                        fireZoneCenter.getY()));
 
         // Calculate dynamic deadline based on travel time (gives buffer to calculated time)
         double flightTimeSeconds = dronesInfo.get(droneID).getCoordinates().distance(fireZoneCenter) / 15.0 + 6.25;
@@ -263,7 +269,7 @@ public class Scheduler {
             }
 
             if (droneState instanceof IdleState && !droneAssignments.containsKey(droneID) && hasEnoughBattery(droneInfo, fireZoneCenter)) {
-                System.out.println("[SCHEDULER] Found available idle drone: " + droneID);
+                EventLogger.info(EventLogger.NO_ID, "Found available idle drone: " + droneID);
                 return droneID;
             }
         }
@@ -281,7 +287,7 @@ public class Scheduler {
 
         // ensure drone is assigned to a fire
         if (!droneAssignments.containsKey(droneID)) {
-            System.out.println("[SCHEDULER] Unrecognized Drone Arrived Event.");
+            EventLogger.error(EventLogger.NO_ID, "Unrecognized DroneArrivedEvent.\"");
             return;
         }
 
@@ -289,8 +295,7 @@ public class Scheduler {
 
         // calculate how much water to drop
         int waterToDrop = Math.min(incident.getWaterFoamAmount(), dronesInfo.get(droneID).getWaterLevel());
-        System.out.println("[SCHEDULER] Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + incident.getZoneID());
-
+        EventLogger.info(EventLogger.NO_ID, "Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + incident.getZoneID());
         // send drop event to drone
         DropAgentEvent dropEvent = new DropAgentEvent(waterToDrop);
         sendToDrone(dropEvent,droneID);
@@ -321,7 +326,7 @@ public class Scheduler {
             // Otherwise update remaining water and put incident in buffer
             incident.setWaterFoamAmount(remainingWater);
             droneAssignments.remove(droneID);
-            System.out.println("[SCHEDULER] Fire at Zone " + incident.getZoneID() + " still needs " + remainingWater + "L of water to extinguish.");
+            EventLogger.warn(EventLogger.NO_ID, "Fire at Zone " + incident.getZoneID() + " still needs " + remainingWater + "L of water to extinguish.");
             unassignedIncidents.add(incident);
         }
     }
@@ -339,10 +344,10 @@ public class Scheduler {
         if (droneID == -1) {
             droneID = nextDroneId.getAndIncrement();
             event.getDroneInfo().setDroneID(droneID);
-            System.out.println("[SCHEDULER] New drone detected, assigning new drone with ID: " + droneID);
+            EventLogger.info(EventLogger.NO_ID, "New drone detected, assigning new drone with ID: " + droneID);
             dronesInfo.put(droneID, event.getDroneInfo());
             this.sendToDrone(event, droneID);
-            System.out.println("\n[SCHEDULER] Registered new Drone {" + droneID + ", Address: " + event.getDroneInfo().getPort() + ", Port: " + event.getDroneInfo().getPort() + "}\n");
+            EventLogger.info(EventLogger.NO_ID, "Registered new Drone {" + droneID + ", Address: " + event.getDroneInfo().getPort() + ", Port: " + event.getDroneInfo().getPort() + "}");
         } else {
             // Store or update the drone info
             DroneInfo drone = event.getDroneInfo();
@@ -350,12 +355,12 @@ public class Scheduler {
 
             // Ensure we don't process a null drone state
             if (drone.getState() == null) {
-                System.out.println("[SCHEDULER] Warning: Drone " + droneID + " has no valid state.");
+                EventLogger.warn(EventLogger.NO_ID, "Drone " + droneID + " has no valid state.");
                 return;
             }
 
             // Log drone update
-            System.out.println("[SCHEDULER] Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName());
+            EventLogger.info(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName());
 
             // Check for faulted state
             if (drone.getState() instanceof FaultedState) {
@@ -371,21 +376,31 @@ public class Scheduler {
      * @param droneID The ID of drone declared stuck
      */
     private void handleStuckDrone(int droneID) {
-        System.out.println("[SCHEDULER] Drone " + droneID + " missed arrival deadline. Declaring it stuck.");
+        System.out.println("[SCHEDULER] Drone " + droneID + " missed arrival deadline. Declaring it STUCK.");
 
-        // Remove assignment and deadline
         IncidentEvent stuckIncident = droneAssignments.remove(droneID);
         droneArrivalDeadlines.remove(droneID);
+        if (stuckIncident == null) return;
 
-        // Abandon the drone's fire
-        if (stuckIncident != null) {
-            System.out.println("[SCHEDULER] Abandoning fire at Zone " + stuckIncident.getZoneID() + " due to stuck drone " + droneID);
+        // Count how many other drones are not faulted
+        int availableDrones = 0;
+        for (Integer id : dronesInfo.keySet()) {
+            if (id != droneID && !(dronesInfo.get(id).getState() instanceof FaultedState)) {
+                availableDrones++;
+            }
+        }
 
-            // Notify Fire Incident Subsystem that fire is abandoned
+        if (availableDrones > 0) {
+            System.out.println("[SCHEDULER] Other drones available, re‑queuing Zone " + stuckIncident.getZoneID() + " for reassignment.");
+            stuckIncident.setFault(Faults.NONE);
+            unassignedIncidents.add(stuckIncident);
+        } else {
+            System.out.println("[SCHEDULER] No other drones available, abandoning fire at Zone " + stuckIncident.getZoneID());
             IncidentEvent abandonedEvent = new IncidentEvent("", stuckIncident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
             sendSocket.send(abandonedEvent, fireSubsystemAddress, fireSubsystemPort);
         }
     }
+
 
     /**
      * Method to iterate through all the arrival deadlines and check if any have been exceeded.
@@ -416,8 +431,8 @@ public class Scheduler {
      * @param args Command-line arguments
      */
     public static void main(String[] args) {
-        System.out.println("======== FIREFIGHTING DRONE SWARM ========");
-        System.out.println("[SCHEDULER] Scheduler has started.");
+        EventLogger.info(EventLogger.NO_ID, "======== FIREFIGHTING DRONE SWARM ========");
+        EventLogger.info(EventLogger.NO_ID, "[SCHEDULER] Scheduler has started.");
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();

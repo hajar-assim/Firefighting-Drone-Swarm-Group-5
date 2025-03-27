@@ -1,5 +1,6 @@
 package subsystems.drone.states;
 
+import logger.EventLogger;
 import subsystems.drone.events.DroneDispatchEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.Event;
@@ -43,13 +44,10 @@ public class IdleState implements DroneState {
      */
     @Override
     public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {
-        System.out.printf(
-                "[DRONE %d] Received dispatch request: {Zone: %d | Coordinates: (%.1f, %.1f)}%n",
-                drone.getDroneID(),
+        EventLogger.info(drone.getDroneID(), String.format("Received dispatch request: {Zone: %d | Coordinates: (%.1f, %.1f)}",
                 event.getZoneID(),
                 event.getCoords().getX(),
-                event.getCoords().getY()
-        );
+                event.getCoords().getY()));
 
         drone.setZoneID(event.getZoneID());
 
@@ -66,7 +64,7 @@ public class IdleState implements DroneState {
      */
     @Override
     public void travel(DroneSubsystem drone) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot travel, no dispatch request.");
+        EventLogger.warn(drone.getDroneID(), "Cannot travel without dispatch request.");
     }
 
     /**
@@ -78,7 +76,7 @@ public class IdleState implements DroneState {
      */
     @Override
     public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot drop agent, not at a target zone.");
+        EventLogger.warn(drone.getDroneID(), "Cannot drop agent, not at a target zone.");
     }
 
 }

@@ -1,5 +1,6 @@
 package subsystems.fire_incident;
 
+import logger.EventLogger;
 import main.EventSocket;
 import subsystems.EventType;
 import subsystems.fire_incident.events.IncidentEvent;
@@ -51,7 +52,7 @@ public class FireIncidentSubsystem {
         File folder = new File(INPUT_FOLDER);
         File[] files = folder.listFiles();
         if (files == null) {
-            System.out.println("No files found in the input folder.");
+            EventLogger.error(EventLogger.NO_ID, "No files found in the input folder.");
             return;
         }
 
@@ -76,7 +77,8 @@ public class FireIncidentSubsystem {
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts.length == 0) {
-                    System.err.println("[FIRE INCIDENT SYSTEM] Invalid event data: " + line);
+                    EventLogger.error(EventLogger.NO_ID, "Invalid event data: " + line);
+                    return;
                 }
 
                 int zoneId = Integer.parseInt(parts[1]);
@@ -90,19 +92,19 @@ public class FireIncidentSubsystem {
                 try {
                     fault = Faults.fromString(parts[4]);
                 } catch (IllegalArgumentException e) {
-                    System.out.println("[FIRE INCIDENT SYSTEM] Invalid fault type '" + parts[4] + "', defaulting to fault type NONE.");
+                    EventLogger.error(EventLogger.NO_ID, "Invalid fault type '" + parts[4] + "', defaulting to fault type NONE.");
                     fault = Faults.NONE;
                 }
 
                 // Create IncidentEvent with injected fault
                 IncidentEvent incident = new IncidentEvent(timestamp, zoneId, eventType, severity, fault);
-                System.out.println("\n[FIRE INCIDENT SYSTEM] New incident detected: {" + incident + "}");
+                EventLogger.info(EventLogger.NO_ID, "New incident detected: {" + incident + "}");
 
                 socket.send(incident, schedulerAddress, schedulerPort);
                 activeFires.add(zoneId);
             }
 
-            System.out.println("[FIRE INCIDENT SYSTEM] All fires reported, waiting for all fires to be extinguished...");
+            EventLogger.info(EventLogger.NO_ID, "All fires reported, waiting for all fires to be extinguished...\n");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -139,7 +141,7 @@ public class FireIncidentSubsystem {
     private void removeFire(int zoneID) {
         if (activeFires.contains(zoneID)) {
             activeFires.remove(zoneID);
-            System.out.println("[FIRE INCIDENT SYSTEM] Fire extinguished at Zone " + zoneID);
+            EventLogger.info(EventLogger.NO_ID, "Fire extinguished at Zone " + zoneID);
         }
     }
 
@@ -156,8 +158,8 @@ public class FireIncidentSubsystem {
 
             if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                 removeFire(event.getZoneID());
-            }else{
-                System.out.println("\n[FIRE INCIDENT SYSTEM] Scheduler Response: {" + event + "}");
+            } else {
+                EventLogger.info(EventLogger.NO_ID, "Scheduler Response: {" + event + "}");
             }
         }
     }
@@ -175,7 +177,7 @@ public class FireIncidentSubsystem {
 
         // only send EVENTS_DONE once all fires are extinguished
         IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE, Faults.NONE);
-        System.out.println("[FIRE INCIDENT SYSTEM] All fires extinguished. Sending EVENTS_DONE.");
+        EventLogger.info(EventLogger.NO_ID, "All fires extinguished. Sending EVENTS_DONE.");
         socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 
         socket.getSocket().close();
