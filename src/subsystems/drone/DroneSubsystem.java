@@ -27,7 +27,6 @@ public class DroneSubsystem {
     private Faults fault;
     DroneInfo info;
 
-
     /**
      * Constructs a {@code DroneSubsystem} with the specified event managers.
      *
