@@ -123,7 +123,7 @@ public class Scheduler {
     private void storeZoneData(ZoneEvent event) {
         fireZones.put(event.getZoneID(), event.getCenter());
         EventLogger.info(EventLogger.NO_ID, String.format(
-                "Stored fire zone {Zone: %d | Center: (%.1f, %.1f)}",
+                "Stored fire zone {ZoneID: %d | Center: (%.1f, %.1f)}",
                 event.getZoneID(),
                 event.getCenter().getX(),
                 event.getCenter().getY()
@@ -370,13 +370,13 @@ public class Scheduler {
     }
 
     /**
-     * Handles a drone that is stuck mid flight.
+     * Handles a drone that is stuck mid-flight.
      * Removes the drone’s current assignment and deadline, and abandons its fire
      *
      * @param droneID The ID of drone declared stuck
      */
     private void handleStuckDrone(int droneID) {
-        System.out.println("[SCHEDULER] Drone " + droneID + " missed arrival deadline. Declaring it STUCK.");
+        EventLogger.warn(EventLogger.NO_ID, "Drone " + droneID + " missed arrival deadline. Declaring it STUCK.");
 
         IncidentEvent stuckIncident = droneAssignments.remove(droneID);
         droneArrivalDeadlines.remove(droneID);
@@ -391,11 +391,11 @@ public class Scheduler {
         }
 
         if (availableDrones > 0) {
-            System.out.println("[SCHEDULER] Other drones available, re‑queuing Zone " + stuckIncident.getZoneID() + " for reassignment.");
+            EventLogger.info(EventLogger.NO_ID, "Other drones available, re‑queuing Zone " + stuckIncident.getZoneID() + " for reassignment.");
             stuckIncident.setFault(Faults.NONE);
             unassignedIncidents.add(stuckIncident);
         } else {
-            System.out.println("[SCHEDULER] No other drones available, abandoning fire at Zone " + stuckIncident.getZoneID());
+            EventLogger.info(EventLogger.NO_ID, "No other drones available, abandoning fire at Zone " + stuckIncident.getZoneID());
             IncidentEvent abandonedEvent = new IncidentEvent("", stuckIncident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
             sendSocket.send(abandonedEvent, fireSubsystemAddress, fireSubsystemPort);
         }
@@ -413,7 +413,7 @@ public class Scheduler {
 
             // If drone missed its deadline then call handleStuckDrone to abandon the fire and inform fire incident subsystem
             if (now > deadline && droneAssignments.containsKey(droneID)) {
-                System.out.println("[SCHEDULER] Drone " + droneID + " missed arrival deadline. Assuming STUCK mid-flight.");
+                EventLogger.info(EventLogger.NO_ID, "Drone " + droneID + " missed arrival deadline. Assuming STUCK mid-flight.");
                 handleStuckDrone(droneID);
             }
         }
@@ -432,7 +432,7 @@ public class Scheduler {
      */
     public static void main(String[] args) {
         EventLogger.info(EventLogger.NO_ID, "======== FIREFIGHTING DRONE SWARM ========");
-        EventLogger.info(EventLogger.NO_ID, "[SCHEDULER] Scheduler has started.");
+        EventLogger.info(EventLogger.NO_ID, "Scheduler has started.");
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();

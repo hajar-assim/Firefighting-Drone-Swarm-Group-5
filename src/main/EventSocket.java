@@ -70,7 +70,7 @@ EventSocket {
      * @return The received event, or null if there was an error during reception.
      */
     public Event receive() {
-        byte data[] = new byte[1000];
+        byte[] data = new byte[4096];
         DatagramPacket packet = new DatagramPacket(data, data.length);
         try {
             socket.receive(packet);
