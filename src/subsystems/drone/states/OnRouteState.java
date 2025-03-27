@@ -75,18 +75,25 @@ public class OnRouteState implements DroneState {
     public void travel(DroneSubsystem drone) {
         Point2D targetCoords = dispatchEvent.getCoords();
         double flightTime = drone.timeToZone(drone.getCoordinates(), targetCoords);
-
         boolean returningToBase = dispatchEvent.getZoneID() == 0;
         String onRoute = returningToBase ? "Base" : "Zone: " + drone.getZoneID();
 
         EventLogger.info(drone.getDroneID(), String.format("On route to " + onRoute
                 + " | Estimated time: " + String.format("%.2f seconds", flightTime)));
 
-        // simulate flight time
         try {
             Thread.sleep((long) flightTime * Scheduler.sleepMultiplier);
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+
+        // If simulateStuckFault flag is true then set drone state to stuck
+        if (dispatchEvent.isSimulateStuckFault()) {
+            EventLogger.info(drone.getDroneID(), "Simulating stuck mid-flight. Not sending arrival event.");
+
+            // Transition to FaultedState so that this drone is not available
+            drone.setState(new FaultedState("DRONE_STUCK_IN_FLIGHT"));
+            return;
         }
 
         drone.setCoordinates(targetCoords);

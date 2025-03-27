@@ -154,6 +154,7 @@ public class FireIncidentSubsystem {
     private void waitForFiresToBeExtinguished() {
         while (!activeFires.isEmpty()) {
             IncidentEvent event = (IncidentEvent) socket.receive();
+            EventLogger.info(EventLogger.NO_ID, "Received event: " + event);
 
             if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                 removeFire(event.getZoneID());
@@ -196,7 +197,4 @@ public class FireIncidentSubsystem {
         FireIncidentSubsystem fireIncidentSubsystem = new FireIncidentSubsystem("data", address, 5000);
         fireIncidentSubsystem.run();
     }
-
-
-
 }

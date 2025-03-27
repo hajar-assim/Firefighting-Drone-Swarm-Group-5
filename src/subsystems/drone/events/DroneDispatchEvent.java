@@ -12,20 +12,18 @@ import java.time.LocalDateTime;
 public class DroneDispatchEvent extends Event {
     private int zoneID;
     private Point2D coords;
+    private boolean simulateStuckFault;
 
 
     /**
-     * Constructs a DroneDispatchEvent with the specified zone ID and coordinates.
-     *
-     * @param zoneID the ID of the zone where the drone is dispatched
-     * @param coords the coordinates of the dispatch location
+     * Constructs a DroneDispatchEvent with the specified zone ID, coordinates, and fault flag.
      */
-    public DroneDispatchEvent(int zoneID, Point2D coords) {
+    public DroneDispatchEvent(int zoneID, Point2D coords, boolean simulateStuckFault) {
         super(LocalDateTime.now().toString());
         this.zoneID = zoneID;
         this.coords = coords;
+        this.simulateStuckFault = simulateStuckFault;
     }
-
 
     /**
      * Gets the ID of the zone where the drone is dispatched.
@@ -36,6 +34,13 @@ public class DroneDispatchEvent extends Event {
         return zoneID;
     }
 
+    /**
+     * Gets the flag that determines if we should simulate a stuck fault.
+     * @return simulateStuckFault bool
+     */
+    public boolean isSimulateStuckFault() {
+        return simulateStuckFault;
+    }
 
     /**
      * Gets the coordinates of the dispatch location.
@@ -54,8 +59,8 @@ public class DroneDispatchEvent extends Event {
      */
     @Override
     public String toString() {
-        return String.format("DroneDispatchEvent[zoneID=%d, coords=(%.2f, %.2f)]",
-                zoneID, coords.getX(), coords.getY());
+        return String.format("DroneDispatchEvent[zoneID=%d, coords=(%.2f, %.2f), simulateStuckFault=%s]",
+                zoneID, coords.getX(), coords.getY(), simulateStuckFault);
     }
 
 

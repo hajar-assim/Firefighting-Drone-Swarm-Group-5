@@ -24,7 +24,6 @@ public class DroneSubsystem {
     public static int DRONE_BATTERY_TIME = 30;
     DroneInfo info;
 
-
     /**
      * Constructs a {@code DroneSubsystem} with the specified event managers.
      *
