@@ -10,7 +10,7 @@ import subsystems.drone.events.*;
 import subsystems.drone.states.DroneState;
 import subsystems.drone.states.FaultedState;
 import subsystems.drone.states.IdleState;
-import subsystems.fire_incident.Fault;
+import subsystems.fire_incident.Faults;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
@@ -213,19 +213,17 @@ public class Scheduler {
         droneAssignments.put(droneID, task);
         EventLogger.info(EventLogger.NO_ID, "Assigned drone to waiting fire at Zone " + task.getZoneID());
 
-
         // Determine if we need to simulate a stuck fault
-        boolean simulateStuck = task.getFault() == Fault.DRONE_STUCK_IN_FLIGHT;
+        boolean simulateStuck = task.getFault() == Faults.DRONE_STUCK_IN_FLIGHT;
 
         // Create dispatch event with the fault flag
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, simulateStuck);
-
         EventLogger.info(EventLogger.NO_ID,
                 String.format("Dispatching Drone %d to Zone %d | Coordinates: (%.1f, %.1f)%n",
-                droneID,
-                zoneID,
-                fireZoneCenter.getX(),
-                fireZoneCenter.getY()));
+                        droneID,
+                        zoneID,
+                        fireZoneCenter.getX(),
+                        fireZoneCenter.getY()));
 
         // Calculate dynamic deadline based on travel time (gives buffer to calculated time)
         double flightTimeSeconds = dronesInfo.get(droneID).getCoordinates().distance(fireZoneCenter) / 15.0 + 6.25;
@@ -235,7 +233,6 @@ public class Scheduler {
 
         // Put deadline in deadline hashmap
         droneArrivalDeadlines.put(droneID, expectedArrivalTime);
-
 
         sendToDrone(dispatchEvent, droneID);
         return true;
@@ -323,7 +320,7 @@ public class Scheduler {
         if (remainingWater <= 0) {
             droneAssignments.remove(droneID);
             // notify FireIncidentSubSystem that the fire has been put out
-            IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Fault.NONE);
+            IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
             sendSocket.send(fireOutEvent, fireSubsystemAddress, fireSubsystemPort);
         } else {
             // Otherwise update remaining water and put incident in buffer
@@ -373,7 +370,7 @@ public class Scheduler {
     }
 
     /**
-     * Handles a drone that is stuck mid-flight.
+     * Handles a drone that is stuck mid flight.
      * Removes the drone’s current assignment and deadline, and abandons its fire
      *
      * @param droneID The ID of drone declared stuck
@@ -395,14 +392,15 @@ public class Scheduler {
 
         if (availableDrones > 0) {
             System.out.println("[SCHEDULER] Other drones available, re‑queuing Zone " + stuckIncident.getZoneID() + " for reassignment.");
-            stuckIncident.setFault(Fault.NONE);
+            stuckIncident.setFault(Faults.NONE);
             unassignedIncidents.add(stuckIncident);
         } else {
             System.out.println("[SCHEDULER] No other drones available, abandoning fire at Zone " + stuckIncident.getZoneID());
-            IncidentEvent abandonedEvent = new IncidentEvent("", stuckIncident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Fault.NONE);
+            IncidentEvent abandonedEvent = new IncidentEvent("", stuckIncident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
             sendSocket.send(abandonedEvent, fireSubsystemAddress, fireSubsystemPort);
         }
     }
+
 
     /**
      * Method to iterate through all the arrival deadlines and check if any have been exceeded.

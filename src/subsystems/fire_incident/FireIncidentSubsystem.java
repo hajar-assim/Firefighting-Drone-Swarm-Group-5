@@ -87,12 +87,11 @@ public class FireIncidentSubsystem {
                 String timestamp = parts[0];
                 EventType eventType = EventType.fromString(parts[2]);
                 Severity severity = Severity.fromString(parts[3]);
-                Fault fault;
+                Faults fault;
 
                 try {
-                    fault = Fault.fromString(parts[4]);
+                    fault = Faults.fromString(parts[4]);
                 } catch (IllegalArgumentException e) {
-
                     EventLogger.error(EventLogger.NO_ID, "Invalid fault type '" + parts[4] + "', defaulting to fault type NONE.");
                     fault = Faults.NONE;
                 }
@@ -179,7 +178,6 @@ public class FireIncidentSubsystem {
         // only send EVENTS_DONE once all fires are extinguished
         IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE, Faults.NONE);
         EventLogger.info(EventLogger.NO_ID, "All fires extinguished. Sending EVENTS_DONE.");
-
         socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 
         socket.getSocket().close();
