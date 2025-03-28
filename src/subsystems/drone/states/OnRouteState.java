@@ -8,6 +8,7 @@ import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.Event;
 import subsystems.drone.DroneSubsystem;
+import subsystems.fire_incident.Faults;
 
 import java.awt.geom.Point2D;
 
@@ -75,18 +76,31 @@ public class OnRouteState implements DroneState {
     public void travel(DroneSubsystem drone) {
         Point2D targetCoords = dispatchEvent.getCoords();
         double flightTime = drone.timeToZone(drone.getCoordinates(), targetCoords);
-
         boolean returningToBase = dispatchEvent.getZoneID() == 0;
         String onRoute = returningToBase ? "Base" : "Zone: " + drone.getZoneID();
 
-        EventLogger.info(drone.getDroneID(), String.format("On route to " + onRoute
-                + " | Estimated time: " + String.format("%.2f seconds", flightTime)));
+        EventLogger.info(drone.getDroneID(),
+                String.format("On route to %s | Estimated time: %.2f seconds", onRoute, flightTime));
 
-        // simulate flight time
         try {
             Thread.sleep((long) flightTime * Scheduler.sleepMultiplier);
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+
+        // Check if a fault is to be simulated
+        if (dispatchEvent.isSimulateFault()) {
+            Faults injectedFault = dispatchEvent.getFault();
+            String faultDescription;
+            if (injectedFault == Faults.NOZZLE_JAMMED) {
+                faultDescription = "NOZZLE_JAMMED";
+            } else {
+                faultDescription = "DRONE_STUCK_IN_FLIGHT";
+            }
+            EventLogger.info(drone.getDroneID(), "Simulating " + faultDescription + " fault mid-flight. Not sending arrival event.");
+            // Transition to FaultedState
+            drone.setState(new FaultedState(faultDescription));
+            return;
         }
 
         drone.setCoordinates(targetCoords);
