@@ -68,6 +68,7 @@ public class Scheduler {
 
                 // Retrieve an event from the queue
                 Event message = receiveSocket.receive();
+
                 if (message == null) {
                     continue;
                 }
@@ -105,6 +106,7 @@ public class Scheduler {
     private void sendToDrone(Event event, int droneID){
         InetAddress address = dronesInfo.get(droneID).getAddress();
         Integer port = dronesInfo.get(droneID).getPort();
+
         if (address != null && port != null) {
             sendSocket.send(event, address, port);
         } else {
@@ -146,7 +148,6 @@ public class Scheduler {
             return;
         }
 
-        System.out.println("This is fire zones: " + fireZones);
         if (!fireZones.containsKey(event.getZoneID())) {
             EventLogger.error(EventLogger.NO_ID, "Fire zone center not found for Zone " + event.getZoneID());
             return;
@@ -163,6 +164,9 @@ public class Scheduler {
         }
     }
 
+    /**
+     * Attempts to assign unassigned tasks to available drones.
+     */
     private void attemptAssignUnassignedTask() {
         if (unassignedIncidents.isEmpty()) {
             return;
@@ -194,9 +198,7 @@ public class Scheduler {
                 if (healthyDrones == 0) {
                     // No healthy drones then abandon fire
                     EventLogger.info(EventLogger.NO_ID, "No healthy drones available; abandoning fire at Zone " + task.getZoneID());
-                    IncidentEvent abandoned = new IncidentEvent(
-                            "", task.getZoneID(),
-                            EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE
+                    IncidentEvent abandoned = new IncidentEvent("", task.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE
                     );
                     sendSocket.send(abandoned, fireSubsystemAddress, fireSubsystemPort);
 
@@ -245,6 +247,8 @@ public class Scheduler {
         long flightTimeMs = (long)(flightTimeSeconds * 1000);
         long bufferTime = 5000;
         long expectedArrivalTime = System.currentTimeMillis() + flightTimeMs + bufferTime;
+
+        // Put deadline in deadline hashmap
         droneArrivalDeadlines.put(droneID, expectedArrivalTime);
 
         sendToDrone(dispatchEvent, droneID);
@@ -256,6 +260,7 @@ public class Scheduler {
      *
      * @param droneInfo The drone to check.
      * @param targetCoords The coordinates of the target zone.
+     * @return true if the drone has enough battery, false otherwise.
      */
     private boolean hasEnoughBattery(DroneInfo droneInfo, Point2D targetCoords){
         double distanceToTarget = droneInfo.getCoordinates().distance(targetCoords);
