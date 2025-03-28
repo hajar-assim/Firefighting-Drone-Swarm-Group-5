@@ -268,7 +268,7 @@ public class Scheduler {
                 continue; // skip drones without a valid state
             }
 
-            if (droneState instanceof IdleState && !droneAssignments.containsKey(droneID) && hasEnoughBattery(droneInfo, fireZoneCenter)) {
+            if (droneState instanceof IdleState && !droneAssignments.containsKey(droneID) && !droneInfo.isFaulted() && hasEnoughBattery(droneInfo, fireZoneCenter)) {
                 EventLogger.info(EventLogger.NO_ID, "Found available idle drone: " + droneID);
                 return droneID;
             }
@@ -364,8 +364,12 @@ public class Scheduler {
 
             // Check for faulted state
             if (drone.getState() instanceof FaultedState) {
+                drone.setFaulted(true);
                 handleStuckDrone(droneID);
+            } else {
+                drone.setFaulted(false);
             }
+
         }
     }
 

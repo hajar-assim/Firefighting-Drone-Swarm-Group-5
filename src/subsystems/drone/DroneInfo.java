@@ -19,6 +19,7 @@ public class DroneInfo implements Serializable {
     private int waterLevel;
     private InetAddress address;
     private Integer port;
+    private boolean isFaulted;
 
 
     /**
@@ -40,7 +41,13 @@ public class DroneInfo implements Serializable {
         this.address = address;
         this.port = port;
     }
+    public boolean isFaulted(){
+        return isFaulted;
+    }
 
+    public void setFaulted(boolean faulted){
+        this.isFaulted = faulted;
+    }
     /**
      * Returns the unique ID of the drone.
      *

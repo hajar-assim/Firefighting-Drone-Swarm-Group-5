@@ -66,9 +66,17 @@ public class DroppingAgentState implements DroneState {
      */
     @Override
     public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {
+        int volume = event.getVolume();
+
+        // Simulate nozzle jam if volume is -1
+        if (volume == -1) {
+            EventLogger.error(drone.getDroneID(), "Nozzle jam detected! Transitioning to faulted state.");
+            drone.setState(new FaultedState("NOZZLE_JAMMED"));
+            return;
+        }
+
         EventLogger.info(drone.getDroneID(), "Dropping agent...");
 
-        int volume = event.getVolume();
         try {
             Thread.sleep((long) volume * Scheduler.sleepMultiplier);
         } catch (InterruptedException e) {
@@ -76,15 +84,14 @@ public class DroppingAgentState implements DroneState {
         }
 
         drone.subtractWaterLevel(volume);
-
         EventLogger.info(drone.getDroneID(), "Dropped " + volume + " liters.");
 
-        // transition to On route and Refill
+        // Transition to OnRouteState to return to base
         EventLogger.info(drone.getDroneID(), "Returning to base to refill.");
-
-        OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0,0), false));
+        OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0, 0), false));
         drone.setZoneID(0);
         drone.setState(toBase);
         drone.getState().travel(drone);
     }
+
 }
