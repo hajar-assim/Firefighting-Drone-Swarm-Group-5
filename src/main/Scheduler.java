@@ -20,6 +20,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.*;
+
 
 public class Scheduler {
     private static final AtomicInteger nextDroneId = new AtomicInteger(1);
@@ -33,6 +35,8 @@ public class Scheduler {
     private final Map<Integer, DroneInfo> dronesInfo;
     private volatile boolean running = true;
     private final PriorityQueue<IncidentEvent> unassignedIncidents;
+    private final ScheduledExecutorService arrivalTimers = Executors.newScheduledThreadPool(10);
+    private final Map<Integer, ScheduledFuture<?>> timerHandles = new HashMap<>();
 
     // Hold the time by which a drone should have arrived to its assigned zone
     private Map<Integer, Long> droneArrivalDeadlines = new HashMap<>();
@@ -225,18 +229,30 @@ public class Scheduler {
                         fireZoneCenter.getX(),
                         fireZoneCenter.getY()));
 
-        // Calculate dynamic deadline based on travel time (gives buffer to calculated time)
+        // Calculate dynamic deadline based on travel time
         double flightTimeSeconds = dronesInfo.get(droneID).getCoordinates().distance(fireZoneCenter) / 15.0 + 6.25;
         long flightTimeMs = (long)(flightTimeSeconds * 1000);
         long bufferTime = 5000;
-        long expectedArrivalTime = System.currentTimeMillis() + flightTimeMs + bufferTime;
 
-        // Put deadline in deadline hashmap
-        droneArrivalDeadlines.put(droneID, expectedArrivalTime);
+        // Cancel any existing timer just in case
+        if (timerHandles.containsKey(droneID)) {
+            timerHandles.get(droneID).cancel(true);
+        }
+
+        // If the task has a STUCK fault, set a timer to catch it
+        if (task.getFault() == Faults.DRONE_STUCK_IN_FLIGHT) {
+            ScheduledFuture<?> timeoutTask = arrivalTimers.schedule(() -> {
+                EventLogger.warn(EventLogger.NO_ID, "[SCHEDULER] Drone " + droneID + " failed to arrive. Marked STUCK. Reassigning zone.");
+                handleStuckDrone(droneID);
+            }, flightTimeMs + bufferTime, TimeUnit.MILLISECONDS);
+
+            timerHandles.put(droneID, timeoutTask);
+        }
 
         sendToDrone(dispatchEvent, droneID);
         return true;
     }
+
 
     /**
      * Checks if the drone has enough battery to complete a round trip to the target coordinates.
@@ -284,6 +300,10 @@ public class Scheduler {
      */
     private void handleDroneArrival(DroneArrivedEvent event) {
         int droneID = event.getDroneID();
+        if (timerHandles.containsKey(droneID)) {
+            timerHandles.get(droneID).cancel(true);
+            timerHandles.remove(droneID);
+        }
 
         // ensure drone is assigned to a fire
         if (!droneAssignments.containsKey(droneID)) {
