@@ -23,11 +23,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Scheduler {
     private static final AtomicInteger nextDroneId = new AtomicInteger(1);
-    public static int sleepMultiplier = 500; // adjust to speed up or slow down (more accurate) the run --> original value = 1000
+    public static int sleepMultiplier = 500;
     private final EventSocket sendSocket;
     private final EventSocket receiveSocket;
-    private final HashMap<Integer, Point2D> fireZones; // Stores fire zone coordinates (zoneID, center)
-    private final HashMap<Integer, IncidentEvent> droneAssignments; // Tracks which drone is assigned to which Incident
+    private final HashMap<Integer, Point2D> fireZones;
+    private final HashMap<Integer, IncidentEvent> droneAssignments;
     private final InetAddress fireSubsystemAddress;
     private final int fireSubsystemPort;
     private final Map<Integer, DroneInfo> dronesInfo;
@@ -68,7 +68,6 @@ public class Scheduler {
 
                 // Retrieve an event from the queue
                 Event message = receiveSocket.receive();
-
                 if (message == null) {
                     continue;
                 }
@@ -86,7 +85,7 @@ public class Scheduler {
                     handleDroneUpdate(updateEvent);
                 }
             } catch (Exception e) {
-                System.err.println("Issue handling message: " + e.getMessage());
+                EventLogger.error(EventLogger.NO_ID, "Issue handling message: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -106,11 +105,10 @@ public class Scheduler {
     private void sendToDrone(Event event, int droneID){
         InetAddress address = dronesInfo.get(droneID).getAddress();
         Integer port = dronesInfo.get(droneID).getPort();
-
         if (address != null && port != null) {
             sendSocket.send(event, address, port);
         } else {
-            System.err.println("[ERROR] Address not found for drone ID: " + droneID);
+            EventLogger.error(EventLogger.NO_ID, "[ERROR] Address not found for drone ID: " + droneID);
         }
     }
 
@@ -137,10 +135,9 @@ public class Scheduler {
      * @param event The IncidentEvent containing fire incident data.
      */
     public void handleIncidentEvent(IncidentEvent event) {
-
         if (event.getEventType() == EventType.EVENTS_DONE) {
             EventLogger.info(EventLogger.NO_ID, "Received EVENTS_DONE. Dispatching all drones to base and terminating...");
-            DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), false);
+            DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE);
 
             for (int droneID : this.dronesInfo.keySet()) {
                 sendToDrone(dispatchToBase, droneID);
@@ -149,6 +146,7 @@ public class Scheduler {
             return;
         }
 
+        System.out.println("This is fire zones: " + fireZones);
         if (!fireZones.containsKey(event.getZoneID())) {
             EventLogger.error(EventLogger.NO_ID, "Fire zone center not found for Zone " + event.getZoneID());
             return;
@@ -165,32 +163,52 @@ public class Scheduler {
         }
     }
 
-    /**
-     * Attempts to assign unassigned tasks to available drones.
-     */
     private void attemptAssignUnassignedTask() {
         if (unassignedIncidents.isEmpty()) {
             return;
         }
 
-        // Process tasks in the queue
-        while (!unassignedIncidents.isEmpty()) {
-            // Get next task to assign
-            IncidentEvent task = unassignedIncidents.peek();
-            // Assign drone to task if drones are available
-            boolean assigned = assignDrone(task);
+        // We'll collect incidents that are unassignable currently but still have hope lol
+        List<IncidentEvent> leftoverIncidents = new ArrayList<>();
 
+        // Process everything currently in unassignedIncidents
+        while (!unassignedIncidents.isEmpty()) {
+            // Remove from the queue so we don't keep re-checking the same item in this pass
+            IncidentEvent task = unassignedIncidents.poll();
+
+            boolean assigned = assignDrone(task);
             if (assigned) {
-                // Remove task from buffer
-                unassignedIncidents.poll();
+                // If assigned send DRONE_DISPATCHED event
                 task.setEventType(EventType.DRONE_DISPATCHED);
                 sendSocket.send(task, fireSubsystemAddress, fireSubsystemPort);
 
             } else {
-                break;
+                // Count healthy drones
+                int healthyDrones = 0;
+                for (Integer id : dronesInfo.keySet()) {
+                    if (!(dronesInfo.get(id).getState() instanceof FaultedState)) {
+                        healthyDrones++;
+                    }
+                }
+
+                if (healthyDrones == 0) {
+                    // No healthy drones then abandon fire
+                    EventLogger.info(EventLogger.NO_ID, "No healthy drones available; abandoning fire at Zone " + task.getZoneID());
+                    IncidentEvent abandoned = new IncidentEvent(
+                            "", task.getZoneID(),
+                            EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE
+                    );
+                    sendSocket.send(abandoned, fireSubsystemAddress, fireSubsystemPort);
+
+                } else {
+                    // There is still at least one healthy drone so it might succeed later, add it to leftoverIncidents list to try again in the next pass of the main loop
+                    leftoverIncidents.add(task);
+                }
             }
         }
 
+        // Now re add the leftoverIncidents incidents to the queue
+        unassignedIncidents.addAll(leftoverIncidents);
     }
 
     /**
@@ -203,21 +221,18 @@ public class Scheduler {
         int zoneID = task.getZoneID();
         Point2D fireZoneCenter = this.fireZones.get(zoneID);
         int droneID = this.findAvailableDrone(fireZoneCenter);
-
-        // no drone available
         if (droneID == -1) {
             return false;
         }
 
-        // track drone assignment
         droneAssignments.put(droneID, task);
         EventLogger.info(EventLogger.NO_ID, "Assigned drone to waiting fire at Zone " + task.getZoneID());
 
-        // Determine if we need to simulate a stuck fault
-        boolean simulateStuck = task.getFault() == Faults.DRONE_STUCK_IN_FLIGHT;
+        // Determine if we need to simulate a fault based on the incident
+        boolean simulateFault = task.getFault() == Faults.DRONE_STUCK_IN_FLIGHT || task.getFault() == Faults.NOZZLE_JAMMED;
 
-        // Create dispatch event with the fault flag
-        DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, simulateStuck);
+        // Create a dispatch event that carries the simulation flag and the specific fault
+        DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, simulateFault, task.getFault());
         EventLogger.info(EventLogger.NO_ID,
                 String.format("Dispatching Drone %d to Zone %d | Coordinates: (%.1f, %.1f)%n",
                         droneID,
@@ -230,8 +245,6 @@ public class Scheduler {
         long flightTimeMs = (long)(flightTimeSeconds * 1000);
         long bufferTime = 5000;
         long expectedArrivalTime = System.currentTimeMillis() + flightTimeMs + bufferTime;
-
-        // Put deadline in deadline hashmap
         droneArrivalDeadlines.put(droneID, expectedArrivalTime);
 
         sendToDrone(dispatchEvent, droneID);
@@ -243,13 +256,11 @@ public class Scheduler {
      *
      * @param droneInfo The drone to check.
      * @param targetCoords The coordinates of the target zone.
-     * @return true if the drone has enough battery, false otherwise.
      */
     private boolean hasEnoughBattery(DroneInfo droneInfo, Point2D targetCoords){
         double distanceToTarget = droneInfo.getCoordinates().distance(targetCoords);
         double distanceToBase = targetCoords.distance(new Point2D.Double(0,0));
         double travelTime = (((distanceToTarget + distanceToBase) - 46.875) / 15 + 6.25);
-
         return (droneInfo.getFlightTime() - travelTime > DroneSubsystem.DRONE_BATTERY_TIME);
     }
 
@@ -364,8 +375,49 @@ public class Scheduler {
 
             // Check for faulted state
             if (drone.getState() instanceof FaultedState) {
-                handleStuckDrone(droneID);
+                String state = drone.getState().toString();
+                if (state.contains("NOZZLE_JAMMED")) {
+                    handleNozzleJammedDrone(droneID);
+                } else {
+                    handleStuckDrone(droneID);
+                }
             }
+        }
+    }
+
+    /**
+     * Handles a drone that has encountered a nozzle jam fault
+     *
+     * @param droneID the ID of the drone
+     */
+    private void handleNozzleJammedDrone(int droneID) {
+        EventLogger.warn(EventLogger.NO_ID, "Drone " + droneID + " reported NOZZLE_JAMMED. Declaring it FAULTED.");
+
+        // Decouple the incident and drone
+        IncidentEvent incident = droneAssignments.remove(droneID);
+        droneArrivalDeadlines.remove(droneID);
+
+        if (incident == null) {
+            return;
+        }
+
+        // Count non faulted drones
+        int availableDrones = 0;
+        for (Integer id : dronesInfo.keySet()) {
+            if (id != droneID && !(dronesInfo.get(id).getState() instanceof FaultedState)) {
+                availableDrones++;
+            }
+        }
+
+        // Requeue fire if other non faulted drones are available then requeue fire, abandon otherwise
+        if (availableDrones > 0) {
+            EventLogger.info(EventLogger.NO_ID, "Other drones available; re-queuing Zone " + incident.getZoneID() + " for reassignment.");
+            incident.setFault(Faults.NONE);
+            unassignedIncidents.add(incident);
+        } else {
+            EventLogger.info(EventLogger.NO_ID, "No other drones available; abandoning fire at Zone " + incident.getZoneID());
+            IncidentEvent abandonedEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
+            sendSocket.send(abandonedEvent, fireSubsystemAddress, fireSubsystemPort);
         }
     }
 
@@ -377,8 +429,10 @@ public class Scheduler {
      */
     private void handleStuckDrone(int droneID) {
         EventLogger.warn(EventLogger.NO_ID, "Drone " + droneID + " missed arrival deadline. Declaring it STUCK.");
-
+        // Remove stuck drone from incident
         IncidentEvent stuckIncident = droneAssignments.remove(droneID);
+
+        // Remove drone's arrival deadline since it is stuck
         droneArrivalDeadlines.remove(droneID);
         if (stuckIncident == null) return;
 

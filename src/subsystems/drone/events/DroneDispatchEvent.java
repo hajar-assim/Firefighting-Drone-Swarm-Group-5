@@ -1,7 +1,7 @@
 package subsystems.drone.events;
 
 import subsystems.Event;
-
+import subsystems.fire_incident.Faults;
 import java.awt.geom.Point2D;
 import java.time.LocalDateTime;
 
@@ -12,17 +12,19 @@ import java.time.LocalDateTime;
 public class DroneDispatchEvent extends Event {
     private int zoneID;
     private Point2D coords;
-    private boolean simulateStuckFault;
+    private boolean simulateFault;
+    private Faults fault;
 
 
     /**
      * Constructs a DroneDispatchEvent with the specified zone ID, coordinates, and fault flag.
      */
-    public DroneDispatchEvent(int zoneID, Point2D coords, boolean simulateStuckFault) {
+    public DroneDispatchEvent(int zoneID, Point2D coords, boolean simulateFault, Faults fault) {
         super(LocalDateTime.now().toString());
         this.zoneID = zoneID;
         this.coords = coords;
-        this.simulateStuckFault = simulateStuckFault;
+        this.simulateFault = simulateFault;
+        this.fault = fault;
     }
 
     /**
@@ -38,8 +40,16 @@ public class DroneDispatchEvent extends Event {
      * Gets the flag that determines if we should simulate a stuck fault.
      * @return simulateStuckFault bool
      */
-    public boolean isSimulateStuckFault() {
-        return simulateStuckFault;
+    public boolean isSimulateFault() {
+        return simulateFault;
+    }
+
+    /**
+     * Returns the specific fault to simulate.
+     * @return the fault.
+     */
+    public Faults getFault() {
+        return fault;
     }
 
     /**
@@ -60,7 +70,7 @@ public class DroneDispatchEvent extends Event {
     @Override
     public String toString() {
         return String.format("DroneDispatchEvent[zoneID=%d, coords=(%.2f, %.2f), simulateStuckFault=%s]",
-                zoneID, coords.getX(), coords.getY(), simulateStuckFault);
+                zoneID, coords.getX(), coords.getY(), simulateFault);
     }
 
 
