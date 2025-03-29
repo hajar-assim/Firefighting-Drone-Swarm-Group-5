@@ -6,6 +6,7 @@ import subsystems.Event;
 import subsystems.drone.events.DroneDispatchEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.DroneSubsystem;
+import subsystems.fire_incident.Faults;
 
 import java.awt.geom.Point2D;
 
@@ -82,7 +83,7 @@ public class DroppingAgentState implements DroneState {
         // transition to On route and Refill
         EventLogger.info(drone.getDroneID(), "Returning to base to refill.");
 
-        OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0,0), false));
+        OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE));
         drone.setZoneID(0);
         drone.setState(toBase);
         drone.getState().travel(drone);
