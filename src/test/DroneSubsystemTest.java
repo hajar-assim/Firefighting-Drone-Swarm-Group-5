@@ -165,35 +165,39 @@ public class DroneSubsystemTest {
         assertEquals(expected, drone.timeToZone(start, end), 0.001);
     }
 
-//    @Test(timeout = 5000)
-//    public void testRun() throws Exception {
-//        // Start drone thread
-//        Thread droneThread = new Thread(() -> {
-//            try {
-//                drone.run();
-//            } catch (Exception e) {
-//                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
-//            }
-//        });
-//
-//        drone.setRunning(true);
-//        droneThread.start();
-//
-//        Thread.sleep(200);
-//        assertTrue("Drone should be running", drone.getRunning());
-//
-//        //shutdown
-//        drone.setRunning(false);
-//
-//        // Send an event to drone's receive port to unblock receive()
-//        int droneID = drone.getDroneID();
-//        int droneReceivePort = 6000 + droneID;
-//        DroneInfo droneInfo = new DroneInfo(localhost, 4001);
-//        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
-//
-//        droneThread.join(1000);
-//        assertFalse("Drone should be stopped", drone.getRunning());
-//    }
+    @Test(timeout = 5000)
+    public void testRun() throws Exception {
+        // Start drone thread
+        Thread droneThread = new Thread(() -> {
+            try {
+                drone.run();
+            } catch (Exception e) {
+                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
+            }
+        });
+
+        drone.setRunning(true);
+        droneThread.start();
+
+        // Send an event to register drone
+        DroneInfo droneInfo = drone.getDroneInfo();
+        int droneID = 1;
+        droneInfo.setDroneID(droneID);
+        int droneReceivePort = droneInfo.getPort();
+        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
+
+        Thread.sleep(200);
+        assertTrue("Drone should be running", drone.getRunning());
+
+        //shutdown
+        drone.setRunning(false);
+
+        // Send another event to unblock receive()
+        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
+
+        droneThread.join(1000);
+        assertFalse("Drone should be stopped", drone.getRunning());
+    }
 
 
     // Test state class for testing state transitions and event handling in DroneSubsystem class

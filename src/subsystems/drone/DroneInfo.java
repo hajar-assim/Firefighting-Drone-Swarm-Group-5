@@ -167,7 +167,7 @@ public class DroneInfo implements Serializable {
     }
 
     /**
-     * TODO: javadocs
+     * Gets the IP address of the drone.
      */
     public InetAddress getAddress(){
         return this.address;
@@ -175,7 +175,7 @@ public class DroneInfo implements Serializable {
 
 
     /**
-     * TODO: javadocs
+     * Gets the port of the drone.
      */
     public Integer getPort(){
         return this.port;
