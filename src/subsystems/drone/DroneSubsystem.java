@@ -221,6 +221,16 @@ public class DroneSubsystem {
     }
 
     /**
+     * Shuts down the drone by setting the running status to false and closing the socket.
+     * The drone will no longer be able to receive events.
+     */
+    public void shutdown() {
+        EventLogger.warn(getDroneID(), "Shutting down drone...");
+        socket.getSocket().close();
+        setRunning(false);
+    }
+
+    /**
      * Calculates the estimated flight time required to travel between two coordinates.
      *
      * @param startCoords The starting coordinates.
@@ -244,7 +254,7 @@ public class DroneSubsystem {
             Event event = socket.receive();
             getState().handleEvent(this, event);
         }
-        EventLogger.info(getDroneID(), "No more incidents, shutting down...");
+        EventLogger.info(getDroneID(), "No more incidents, drone has been shut down.");
         socket.getSocket().close();
     }
 

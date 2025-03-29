@@ -227,10 +227,12 @@ public class Scheduler {
         // Calculate dynamic deadline based on travel time (gives buffer to calculated time)
         double flightTimeSeconds = DroneSubsystem.timeToZone(dronesInfo.get(droneID).getCoordinates(), fireZoneCenter) + 5.0;
 
-        if (task.getFault() != Faults.PACKET_LOSS){
+        // simulate packet loss by not sending drone the event
+        if (task.getFault() == Faults.PACKET_LOSS){
+            startWatchdog(droneID, flightTimeSeconds);
+        } else {
             sendToDrone(dispatchEvent, droneID);
         }
-        startWatchdog(droneID, flightTimeSeconds);
 
         return true;
     }
@@ -293,7 +295,9 @@ public class Scheduler {
         DropAgentEvent dropEvent = new DropAgentEvent(waterToDrop);
 
         sendToDrone(dropEvent,droneID);
-        startWatchdog(droneID, waterToDrop * 1000);
+
+        // TODO: why is this necessary in the drop water event?
+        // startWatchdog(droneID, waterToDrop * 1000);
     }
 
     /**

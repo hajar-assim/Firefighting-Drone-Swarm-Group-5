@@ -7,8 +7,14 @@ import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.events.DroneDispatchEvent;
 import subsystems.fire_incident.Faults;
 
+import java.util.ArrayList;
+
 public class FaultedState implements DroneState {
     private final Faults faultDescription;
+    private static final int RECOVERY_TIME = 10000;
+    public static final ArrayList<Faults> UNRECOVERABLE_FAULTS = new ArrayList<>() {{
+        add(Faults.NOZZLE_JAMMED);
+    }};
 
     /**
      * Constructs a new FaultedState with a human‑readable description of the fault.
@@ -28,15 +34,14 @@ public class FaultedState implements DroneState {
     @Override
     public void handleEvent(DroneSubsystem drone, Event event) {
         if (event instanceof DroneDispatchEvent){
-            if (((DroneDispatchEvent) event).getZoneID() == 0 && ((DroneDispatchEvent) event).getFault() != Faults.NONE){
+            if (((DroneDispatchEvent) event).getZoneID() == 0 && UNRECOVERABLE_FAULTS.contains(((DroneDispatchEvent) event).getFault())){
                 // unrecoverable fault, shut down the drone
-                drone.setRunning(false);
+                drone.shutdown();
             }
             else {
-
                 // Simulate recovering
                 try {
-                    Thread.sleep(10000);
+                    Thread.sleep(RECOVERY_TIME);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
