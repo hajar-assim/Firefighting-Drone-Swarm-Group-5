@@ -377,7 +377,7 @@ public class Scheduler {
      */
     private void handleNozzleJammedDrone(int droneID) {
         EventLogger.warn(EventLogger.NO_ID, "Drone " + droneID + " in faulted state, reported NOZZLE_JAMMED. Shutting Down Drone.");
-
+        cancelWatchdog(droneID);
         // Decouple the incident and drone
         IncidentEvent incident = droneAssignments.remove(droneID);
 
@@ -401,6 +401,7 @@ public class Scheduler {
      */
     private void handleTransientDroneFailure(int droneID, boolean dispatchToBase) {
         // Remove stuck drone from incident
+        cancelWatchdog(droneID);
         IncidentEvent incidentEvent = droneAssignments.remove(droneID);
 
         EventLogger.info(EventLogger.NO_ID, "Re‑queuing Incident " + incidentEvent.toString() + " for reassignment.");
