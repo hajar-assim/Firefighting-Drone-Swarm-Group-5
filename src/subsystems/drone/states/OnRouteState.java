@@ -2,9 +2,7 @@ package subsystems.drone.states;
 
 import logger.EventLogger;
 import main.Scheduler;
-import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneDispatchEvent;
-import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.Event;
 import subsystems.drone.DroneSubsystem;
@@ -32,10 +30,10 @@ public class OnRouteState implements DroneState {
     @Override
     public void handleEvent(DroneSubsystem drone, Event event) {
         if (event instanceof DroneDispatchEvent) {
-            EventLogger.info(drone.getDroneID(), "Redirecting to a new target zone.");
+            EventLogger.info(drone.getDroneID(), "Redirecting to a new target zone.", false);
             dispatch(drone, (DroneDispatchEvent) event);
         } else if (event instanceof DropAgentEvent dropAgentEvent) {
-            EventLogger.info(drone.getDroneID(), "Received order to drop " + dropAgentEvent.getVolume() + "L of water.");
+            EventLogger.info(drone.getDroneID(), "Received order to drop " + dropAgentEvent.getVolume() + "L of water.", false);
             drone.setState(new DroppingAgentState());
             drone.getState().handleEvent(drone, dropAgentEvent);
         } else {
@@ -83,7 +81,7 @@ public class OnRouteState implements DroneState {
         String onRoute = returningToBase ? "Base" : "Zone: " + drone.getZoneID();
 
         EventLogger.info(drone.getDroneID(), String.format("On route to " + onRoute
-                + " | Estimated time: " + String.format("%.2f seconds", flightTime)));
+                + " | Estimated time: " + String.format("%.2f seconds", flightTime)), false);
 
         // simulate flight time
         try {
@@ -94,7 +92,7 @@ public class OnRouteState implements DroneState {
 
         // Check if a fault is to be simulated
         if(dispatchEvent.getFault() == Faults.DRONE_STUCK_IN_FLIGHT){
-            EventLogger.info(drone.getDroneID(), "Simulating " + dispatchEvent.getFault().toString() + " fault mid-flight. Not sending arrival event.");
+            EventLogger.info(drone.getDroneID(), "Simulating " + dispatchEvent.getFault().toString() + " fault mid-flight. Not sending arrival event.", false);
             drone.setState(new FaultedState(dispatchEvent.getFault()));
             drone.setZoneID(0);
             return;
@@ -103,7 +101,7 @@ public class OnRouteState implements DroneState {
         }
 
         drone.setCoordinates(targetCoords);
-        EventLogger.info(drone.getDroneID(), "Arrived at " + onRoute);
+        EventLogger.info(drone.getDroneID(), "Arrived at " + onRoute, false);
 
         if (returningToBase) {
             refill(drone);
@@ -133,11 +131,11 @@ public class OnRouteState implements DroneState {
         // reset water level and flight time
         drone.setWaterLevel(15);
         drone.setFlightTime(10 * 60);
-        EventLogger.info(drone.getDroneID(), "Refilled to " + drone.getWaterLevel() + " liters.");
+        EventLogger.info(drone.getDroneID(), "Refilled to " + drone.getWaterLevel() + " liters.", false);
 
         // transition back to IdleState
         IdleState idleState = new IdleState();
-        EventLogger.info(drone.getDroneID(), "Now idle and ready for dispatch.\n");
+        EventLogger.info(drone.getDroneID(), "Now idle and ready for dispatch.\n", true);
         drone.setState(idleState);
     }
 }

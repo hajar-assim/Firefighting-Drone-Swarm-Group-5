@@ -45,7 +45,7 @@ public class FaultedState implements DroneState {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                EventLogger.info(drone.getDroneID(), "[Drone " + drone.getDroneID() + "] Recovered from fault, returning to base");
+                EventLogger.info(drone.getDroneID(), "[Drone " + drone.getDroneID() + "] Recovered from fault, returning to base", false);
                 dispatch(drone, (DroneDispatchEvent) event);
             }
         }

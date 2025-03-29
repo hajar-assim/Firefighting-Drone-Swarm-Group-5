@@ -47,7 +47,7 @@ public class IdleState implements DroneState {
         EventLogger.info(drone.getDroneID(), String.format("Received dispatch request: {Zone: %d | Coordinates: (%.1f, %.1f)}",
                 event.getZoneID(),
                 event.getCoords().getX(),
-                event.getCoords().getY()));
+                event.getCoords().getY()), true);
 
         drone.setZoneID(event.getZoneID());
 

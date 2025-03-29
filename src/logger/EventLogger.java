@@ -1,7 +1,5 @@
 package logger;
 
-import subsystems.drone.DroneSubsystem;
-
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
@@ -16,12 +14,15 @@ public class EventLogger {
 
     /**
      * Logs an information log. If the id is -2, it is a scheduler or fire incident subsystem.
+     *
      * @param clazz
      * @param id
      * @param message
+     * @param definitiveEvent
      */
-    public static void info(int id, String message) {
-        log(GREEN, "INFO", getCallingClassName(), id, message);
+    public static void info(int id, String message, boolean definitiveEvent) {
+        String color = definitiveEvent ? GREEN : RESET;
+        log(color, "INFO", getCallingClassName(), id, message);
     }
 
     public static void warn(int id, String message) {

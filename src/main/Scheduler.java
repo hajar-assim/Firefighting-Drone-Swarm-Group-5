@@ -130,7 +130,7 @@ public class Scheduler {
                 event.getZoneID(),
                 event.getCenter().getX(),
                 event.getCenter().getY()
-        ));
+        ), false);
     }
 
     /**
@@ -142,7 +142,7 @@ public class Scheduler {
     public void handleIncidentEvent(IncidentEvent event) {
 
         if (event.getEventType() == EventType.EVENTS_DONE) {
-            EventLogger.info(EventLogger.NO_ID, "Received EVENTS_DONE. Dispatching all drones to base and terminating...");
+            EventLogger.info(EventLogger.NO_ID, "Received EVENTS_DONE. Dispatching all drones to base and terminating...", false);
             DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE);
 
             for (int droneID : this.dronesInfo.keySet()) {
@@ -157,12 +157,12 @@ public class Scheduler {
             return;
         }
 
-        EventLogger.info(EventLogger.NO_ID,"New fire incident at Zone " + event.getZoneID() + ". Requires " + event.getWaterFoamAmount() + "L of water.");
+        EventLogger.info(EventLogger.NO_ID,"New fire incident at Zone " + event.getZoneID() + ". Requires " + event.getWaterFoamAmount() + "L of water.", true);
         if (assignDrone(event)) {
             event.setEventType(EventType.DRONE_DISPATCHED);
             sendSocket.send(event, fireSubsystemAddress, fireSubsystemPort);
         } else {
-            EventLogger.info(EventLogger.NO_ID, "No drones available for fire at zone " + event.getZoneID() + ", added to unassigned incident buffer for assignment when drone is available\n");
+            EventLogger.info(EventLogger.NO_ID, "No drones available for fire at zone " + event.getZoneID() + ", added to unassigned incident buffer for assignment when drone is available\n", false);
             // Add to buffer of unassigned incidents
             unassignedIncidents.add(event);
         }
@@ -212,7 +212,7 @@ public class Scheduler {
 
         // track drone assignment
         droneAssignments.put(droneID, task);
-        EventLogger.info(EventLogger.NO_ID, "Assigned drone to waiting fire at Zone " + task.getZoneID());
+        EventLogger.info(EventLogger.NO_ID, "Assigned drone to waiting fire at Zone " + task.getZoneID(), false);
 
 
         // Create a dispatch event that carries the simulation flag and the specific fault
@@ -222,7 +222,7 @@ public class Scheduler {
                         droneID,
                         zoneID,
                         fireZoneCenter.getX(),
-                        fireZoneCenter.getY()));
+                        fireZoneCenter.getY()), true);
 
         // Calculate dynamic deadline based on travel time (gives buffer to calculated time)
         double flightTimeSeconds = DroneSubsystem.timeToZone(dronesInfo.get(droneID).getCoordinates(), fireZoneCenter) + 5.0;
@@ -267,7 +267,7 @@ public class Scheduler {
             }
 
             if (droneState instanceof IdleState && !droneAssignments.containsKey(droneID) && hasEnoughBattery(droneInfo, fireZoneCenter)) {
-                EventLogger.info(EventLogger.NO_ID, "Found available idle drone: " + droneID);
+                EventLogger.info(EventLogger.NO_ID, "Found available idle drone: " + droneID, false);
                 return droneID;
             }
         }
@@ -289,7 +289,7 @@ public class Scheduler {
 
         // calculate how much water to drop
         int waterToDrop = Math.min(incident.getWaterFoamAmount(), dronesInfo.get(droneID).getWaterLevel());
-        EventLogger.info(EventLogger.NO_ID, "Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + incident.getZoneID());
+        EventLogger.info(EventLogger.NO_ID, "Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + incident.getZoneID(), false);
         // send drop event to drone
         DropAgentEvent dropEvent = new DropAgentEvent(waterToDrop);
 
@@ -319,6 +319,7 @@ public class Scheduler {
             droneAssignments.remove(droneID);
             // notify FireIncidentSubSystem that the fire has been put out
             IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
+            EventLogger.info(EventLogger.NO_ID, "Fire at Zone " + incident.getZoneID() + " has been extinguished.", true);
             sendSocket.send(fireOutEvent, fireSubsystemAddress, fireSubsystemPort);
         } else {
             // Otherwise update remaining water and put incident in buffer
@@ -342,10 +343,10 @@ public class Scheduler {
         if (droneID == -1) {
             droneID = nextDroneId.getAndIncrement();
             event.getDroneInfo().setDroneID(droneID);
-            EventLogger.info(EventLogger.NO_ID, "New drone detected, assigning new drone with ID: " + droneID);
+            EventLogger.info(EventLogger.NO_ID, "New drone detected, assigning new drone with ID: " + droneID, false);
             dronesInfo.put(droneID, event.getDroneInfo());
             this.sendToDrone(event, droneID);
-            EventLogger.info(EventLogger.NO_ID, "Registered new Drone {" + droneID + ", Address: " + event.getDroneInfo().getPort() + ", Port: " + event.getDroneInfo().getPort() + "}");
+            EventLogger.info(EventLogger.NO_ID, "Registered new Drone {" + droneID + ", Address: " + event.getDroneInfo().getPort() + ", Port: " + event.getDroneInfo().getPort() + "}", true);
         } else {
             // Store or update the drone info
             DroneInfo drone = event.getDroneInfo();
@@ -358,7 +359,7 @@ public class Scheduler {
             }
 
             // Log drone update
-            EventLogger.info(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName());
+            EventLogger.info(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName(), false);
 
             // Check for faulted state
             if (drone.getState() instanceof FaultedState state) {
@@ -385,7 +386,7 @@ public class Scheduler {
             return;
         }
 
-        EventLogger.info(EventLogger.NO_ID, "Re-queuing Incident at Zone " + incident.getZoneID() + " for reassignment.");
+        EventLogger.info(EventLogger.NO_ID, "Re-queuing Incident at Zone " + incident.getZoneID() + " for reassignment.", false);
         incident.setFault(Faults.NONE);
         unassignedIncidents.add(incident);
 
@@ -404,7 +405,7 @@ public class Scheduler {
         cancelWatchdog(droneID);
         IncidentEvent incidentEvent = droneAssignments.remove(droneID);
 
-        EventLogger.info(EventLogger.NO_ID, "Re‑queuing Incident " + incidentEvent.toString() + " for reassignment.");
+        EventLogger.info(EventLogger.NO_ID, "Re‑queuing Incident " + incidentEvent.toString() + " for reassignment.", false);
         incidentEvent.setFault(Faults.NONE);
         unassignedIncidents.add(incidentEvent);
 
@@ -454,8 +455,8 @@ public class Scheduler {
      * @param args Command-line arguments
      */
     public static void main(String[] args) {
-        EventLogger.info(EventLogger.NO_ID, "======== FIREFIGHTING DRONE SWARM ========");
-        EventLogger.info(EventLogger.NO_ID, "[SCHEDULER] Scheduler has started.");
+        EventLogger.info(EventLogger.NO_ID, "======== FIREFIGHTING DRONE SWARM ========", false);
+        EventLogger.info(EventLogger.NO_ID, "[SCHEDULER] Scheduler has started.", false);
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();
