@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Scheduler {
     private static final AtomicInteger nextDroneId = new AtomicInteger(1);
-    public static int sleepMultiplier = 500;
+    public static int sleepMultiplier = 1000;
     private final EventSocket sendSocket;
     private final EventSocket receiveSocket;
     private final HashMap<Integer, Point2D> fireZones;
@@ -228,9 +228,8 @@ public class Scheduler {
         double flightTimeSeconds = DroneSubsystem.timeToZone(dronesInfo.get(droneID).getCoordinates(), fireZoneCenter) + 5.0;
 
         // simulate packet loss by not sending drone the event
-        if (task.getFault() == Faults.PACKET_LOSS){
-            startWatchdog(droneID, flightTimeSeconds);
-        } else {
+        startWatchdog(droneID, flightTimeSeconds);
+        if (task.getFault() != Faults.PACKET_LOSS){
             sendToDrone(dispatchEvent, droneID);
         }
 
@@ -296,8 +295,7 @@ public class Scheduler {
 
         sendToDrone(dropEvent,droneID);
 
-        // TODO: why is this necessary in the drop water event?
-        // startWatchdog(droneID, waterToDrop * 1000);
+        startWatchdog(droneID, waterToDrop * 1000);
     }
 
     /**
