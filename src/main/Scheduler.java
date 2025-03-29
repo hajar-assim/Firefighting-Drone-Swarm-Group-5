@@ -212,17 +212,16 @@ public class Scheduler {
 
         // track drone assignment
         droneAssignments.put(droneID, task);
-        EventLogger.info(EventLogger.NO_ID, "Assigned drone to waiting fire at Zone " + task.getZoneID(), false);
-
 
         // Create a dispatch event that carries the simulation flag and the specific fault
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, task.getFault());
         EventLogger.info(EventLogger.NO_ID,
-                String.format("Dispatching Drone %d to Zone %d | Coordinates: (%.1f, %.1f)%n",
+                String.format("Assigned and dispatching Drone %d → Zone %d | Coords: (%.1f, %.1f) | Fault: %s",
                         droneID,
                         zoneID,
                         fireZoneCenter.getX(),
-                        fireZoneCenter.getY()), true);
+                        fireZoneCenter.getY(),
+                        task.getFault()), true);
 
         // Calculate dynamic deadline based on travel time (gives buffer to calculated time)
         double flightTimeSeconds = DroneSubsystem.timeToZone(dronesInfo.get(droneID).getCoordinates(), fireZoneCenter) + 5.0;
@@ -286,7 +285,6 @@ public class Scheduler {
 
 
         IncidentEvent incident = droneAssignments.get(droneID);
-
         // calculate how much water to drop
         int waterToDrop = Math.min(incident.getWaterFoamAmount(), dronesInfo.get(droneID).getWaterLevel());
         EventLogger.info(EventLogger.NO_ID, "Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + incident.getZoneID(), false);
