@@ -30,7 +30,7 @@ class IncidentEventTest {
     @Test
     @DisplayName("Test toString() method")
     void testToString() {
-        String expected = "Time: 14:03:15 | Zone: 1 | Type: FIRE_DETECTED | Severity: HIGH";
+        String expected = "Time: 14:03:15 | Zone: 1 | Type: FIRE_DETECTED | Severity: HIGH | Fault: NONE";
         assertEquals(expected, incidentEvent.toString());
     }
 }
