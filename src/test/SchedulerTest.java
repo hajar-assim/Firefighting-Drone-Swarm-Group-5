@@ -1,9 +1,13 @@
 package test;
 
+import logger.EventLogger;
+import main.EventSocket;
 import main.Scheduler;
 import org.junit.jupiter.api.*;
+import subsystems.Event;
 import subsystems.EventType;
 import subsystems.drone.events.*;
+import subsystems.drone.states.FaultedState;
 import subsystems.fire_incident.*;
 import subsystems.fire_incident.events.*;
 import subsystems.drone.DroneInfo;
@@ -19,15 +23,21 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SchedulerTest {
     private Scheduler scheduler;
+    private InetAddress localhost;
+    private EventSocket droneSocket;
+    private static final int SCHEDULER_PORT = 5000;
 
     @BeforeEach
     void setUp() throws Exception {
-        scheduler = new Scheduler(InetAddress.getLocalHost(), 7000);
+        localhost = InetAddress.getLocalHost();
+        scheduler = new Scheduler(localhost, 7000);
+        droneSocket = new EventSocket();
     }
 
 
     @AfterEach
     void tearDown() {
+        droneSocket.close();
         scheduler.close();
     }
 
@@ -155,6 +165,83 @@ class SchedulerTest {
         handleDropAgentMethod.invoke(scheduler, dropEvent);
 
         assertEquals(10, incident.getWaterFoamAmount(), "Fire incident should have updated water requirement.");
+    }
+
+    @Test
+    public void testRegisterDrone() throws Exception {
+        // Start drone thread
+        Thread schedulerThread = new Thread(() -> {
+            try {
+                scheduler.run();
+            } catch (Exception e) {
+                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
+            }
+        });
+
+        schedulerThread.start();
+
+        // Register drone
+        DroneInfo droneInfo = new DroneInfo(localhost, droneSocket.getSocket().getLocalPort());
+        droneSocket.send(new DroneUpdateEvent(droneInfo), localhost, SCHEDULER_PORT);
+
+        DroneUpdateEvent event = (DroneUpdateEvent) droneSocket.receive();
+        assertNotEquals(-1, event.getDroneInfo().getDroneID());
+
+        IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE, Faults.NONE);
+        new EventSocket().send(noMoreIncidents, localhost, SCHEDULER_PORT);
+
+        schedulerThread.join(1000);
+    }
+
+    @Test
+    public void testDroneFault() throws Exception {
+        // Start drone thread
+        Thread schedulerThread = new Thread(() -> {
+            try {
+                scheduler.run();
+            } catch (Exception e) {
+                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
+            }
+        });
+
+        schedulerThread.start();
+
+        // Register drone
+        DroneInfo droneInfo = new DroneInfo(localhost, droneSocket.getSocket().getLocalPort());
+        droneSocket.send(new DroneUpdateEvent(droneInfo), localhost, SCHEDULER_PORT);
+
+        DroneUpdateEvent event = (DroneUpdateEvent) droneSocket.receive();
+        droneInfo = event.getDroneInfo();
+        assertNotEquals(-1, droneInfo.getDroneID());
+
+        // Add zone and create incident
+        ZoneEvent zoneEvent = new ZoneEvent(1, "(10;20)", "(30;40)");
+        new EventSocket().send(zoneEvent, localhost, SCHEDULER_PORT);
+
+        IncidentEvent incident = new IncidentEvent("", 1, EventType.FIRE_DETECTED, Severity.HIGH, Faults.NOZZLE_JAMMED);
+        new EventSocket().send(incident, localhost, SCHEDULER_PORT);
+
+        // Check that drone is dispatched
+        Event event1 = droneSocket.receive();
+        assertInstanceOf(DroneDispatchEvent.class, event1);
+
+        DroneDispatchEvent event2 = (DroneDispatchEvent) event1;
+        assertEquals(1, event2.getZoneID());
+
+        // Send drone fault
+        droneInfo.setState(new FaultedState(Faults.NOZZLE_JAMMED));
+        droneSocket.send(new DroneUpdateEvent(droneInfo), localhost, SCHEDULER_PORT);
+
+        // Check that scheduler handles fault
+        event1 = droneSocket.receive();
+        assertInstanceOf(DroneDispatchEvent.class, event1);
+        event2 = (DroneDispatchEvent) event1;
+        assertEquals(0, event2.getZoneID());
+
+        IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE, Faults.NONE);
+        new EventSocket().send(noMoreIncidents, localhost, SCHEDULER_PORT);
+
+        schedulerThread.join(1000);
     }
 
 }
