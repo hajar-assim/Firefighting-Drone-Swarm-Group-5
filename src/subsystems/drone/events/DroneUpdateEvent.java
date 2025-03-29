@@ -9,18 +9,15 @@ import java.time.LocalDateTime;
  * Represents an event that updates the state of a specific drone.
  */
 public class DroneUpdateEvent extends Event {
-    private int droneID;
     private DroneInfo droneInfo;
 
     /**
      * Constructs a DroneUpdateEvent with the specified drone ID and state.
      *
-     * @param droneID the ID of the drone being updated
      * @param droneInfo the new info of the drone
      */
-    public DroneUpdateEvent(int droneID, DroneInfo droneInfo) {
+    public DroneUpdateEvent(DroneInfo droneInfo) {
         super(LocalDateTime.now().toString());
-        this.droneID = droneID;
         this.droneInfo = droneInfo;
     }
 
@@ -31,7 +28,7 @@ public class DroneUpdateEvent extends Event {
      * @return the drone ID
      */
     public int getDroneID() {
-        return droneID;
+        return droneInfo.getDroneID();
     }
 
 
@@ -53,7 +50,7 @@ public class DroneUpdateEvent extends Event {
     @Override
     public String toString() {
         return String.format("DroneUpdateEvent[droneID=%d, droneState=%s]",
-                droneID, droneInfo);
+                droneInfo.getDroneID(), droneInfo);
     }
 
 

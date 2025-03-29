@@ -111,7 +111,7 @@ public class DroneSubsystem {
      */
     public void setState(DroneState newState){
         info.setState(newState);
-        DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(getDroneID(), info);
+        DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(info);
         socket.send(droneUpdateEvent, getSchedulerAddress(), getSchedulerPort());
     }
 
@@ -221,13 +221,23 @@ public class DroneSubsystem {
     }
 
     /**
+     * Shuts down the drone by setting the running status to false and closing the socket.
+     * The drone will no longer be able to receive events.
+     */
+    public void shutdown() {
+        EventLogger.warn(getDroneID(), "Shutting down drone...");
+        socket.getSocket().close();
+        setRunning(false);
+    }
+
+    /**
      * Calculates the estimated flight time required to travel between two coordinates.
      *
      * @param startCoords The starting coordinates.
      * @param endCoords   The target coordinates.
      * @return The estimated flight time in seconds.
      */
-    public double timeToZone(Point2D startCoords, Point2D endCoords) {
+    public static double timeToZone(Point2D startCoords, Point2D endCoords) {
         double distance = startCoords.distance(endCoords);
         return ((distance - 46.875) / 15 + 6.25);
     }
@@ -244,7 +254,7 @@ public class DroneSubsystem {
             Event event = socket.receive();
             getState().handleEvent(this, event);
         }
-        EventLogger.info(getDroneID(), "No more incidents, shutting down...");
+        EventLogger.info(getDroneID(), "No more incidents, drone has been shut down.", false);
         socket.getSocket().close();
     }
 
@@ -270,11 +280,11 @@ public class DroneSubsystem {
      */
     private void registerWithScheduler() {
         try {
-            DroneUpdateEvent event = new DroneUpdateEvent(-1, this.info);
+            DroneUpdateEvent event = new DroneUpdateEvent(this.info);
             socket.send(event, schedulerAddress, schedulerPort);
-            EventLogger.info(-1, "Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort());
+            EventLogger.info(-1, "Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort(), false);
             event = (DroneUpdateEvent) socket.receive();
-            EventLogger.info(event.getDroneInfo().getDroneID(), "Drone registered with Scheduler as Drone " + event.getDroneInfo().getDroneID() + ".\n");
+            EventLogger.info(event.getDroneInfo().getDroneID(), "Drone registered with Scheduler as Drone " + event.getDroneInfo().getDroneID() + ".\n", false);
             this.setDroneInfo(event.getDroneInfo());
         } catch (Exception e) {
             EventLogger.error(-1, "Error registering drone with Scheduler: " + e.getMessage());

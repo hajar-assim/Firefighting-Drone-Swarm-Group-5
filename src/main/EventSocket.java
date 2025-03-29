@@ -83,6 +83,9 @@ EventSocket {
             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
             Event event = (Event) objectInputStream.readObject();
             return event;
+        } catch (SocketTimeoutException e) {
+            // No packet received in time
+            return null;
         } catch (EOFException e) {
             System.err.println("[EventSocket] EOFException during receive: " + e.getMessage());
             return null;
