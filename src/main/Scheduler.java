@@ -137,6 +137,7 @@ public class Scheduler {
      * @param event The IncidentEvent containing fire incident data.
      */
     public void handleIncidentEvent(IncidentEvent event) {
+
         if (event.getEventType() == EventType.EVENTS_DONE) {
             EventLogger.info(EventLogger.NO_ID, "Received EVENTS_DONE. Dispatching all drones to base and terminating...");
             DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE);
@@ -223,10 +224,13 @@ public class Scheduler {
         int zoneID = task.getZoneID();
         Point2D fireZoneCenter = this.fireZones.get(zoneID);
         int droneID = this.findAvailableDrone(fireZoneCenter);
+
+        // no drone available
         if (droneID == -1) {
             return false;
         }
 
+        // track drone assignment
         droneAssignments.put(droneID, task);
         EventLogger.info(EventLogger.NO_ID, "Assigned drone to waiting fire at Zone " + task.getZoneID());
 
@@ -266,6 +270,7 @@ public class Scheduler {
         double distanceToTarget = droneInfo.getCoordinates().distance(targetCoords);
         double distanceToBase = targetCoords.distance(new Point2D.Double(0,0));
         double travelTime = (((distanceToTarget + distanceToBase) - 46.875) / 15 + 6.25);
+
         return (droneInfo.getFlightTime() - travelTime > DroneSubsystem.DRONE_BATTERY_TIME);
     }
 
@@ -491,7 +496,7 @@ public class Scheduler {
      */
     public static void main(String[] args) {
         EventLogger.info(EventLogger.NO_ID, "======== FIREFIGHTING DRONE SWARM ========");
-        EventLogger.info(EventLogger.NO_ID, "Scheduler has started.");
+        EventLogger.info(EventLogger.NO_ID, "[SCHEDULER] Scheduler has started.");
         InetAddress address = null;
         try{
             address = InetAddress.getLocalHost();

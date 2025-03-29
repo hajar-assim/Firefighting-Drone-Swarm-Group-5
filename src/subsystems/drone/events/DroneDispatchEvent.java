@@ -17,7 +17,10 @@ public class DroneDispatchEvent extends Event {
 
 
     /**
-     * Constructs a DroneDispatchEvent with the specified zone ID, coordinates, and fault flag.
+     * Constructs a DroneDispatchEvent with the specified zone ID and coordinates.
+     *
+     * @param zoneID the ID of the zone where the drone is dispatched
+     * @param coords the coordinates of the dispatch location
      */
     public DroneDispatchEvent(int zoneID, Point2D coords, boolean simulateFault, Faults fault) {
         super(LocalDateTime.now().toString());
@@ -26,6 +29,7 @@ public class DroneDispatchEvent extends Event {
         this.simulateFault = simulateFault;
         this.fault = fault;
     }
+
 
     /**
      * Gets the ID of the zone where the drone is dispatched.
