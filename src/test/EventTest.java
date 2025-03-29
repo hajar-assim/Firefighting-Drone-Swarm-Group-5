@@ -48,7 +48,7 @@ class EventTests {
             e.printStackTrace();
         }
 
-        DroneUpdateEvent event = new DroneUpdateEvent(1, info);
+        DroneUpdateEvent event = new DroneUpdateEvent(info);
 
         assertEquals(1, event.getDroneID());
         assertEquals(info, event.getDroneInfo());

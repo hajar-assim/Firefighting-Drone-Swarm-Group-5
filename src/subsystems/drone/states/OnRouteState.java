@@ -92,7 +92,7 @@ public class OnRouteState implements DroneState {
 
         // Check if a fault is to be simulated
         if(dispatchEvent.getFault() == Faults.DRONE_STUCK_IN_FLIGHT){
-            EventLogger.info(drone.getDroneID(), "Simulating " + dispatchEvent.getFault().toString() + " fault mid-flight. Not sending arrival event.", false);
+            EventLogger.warn(drone.getDroneID(), "Simulating " + dispatchEvent.getFault().toString() + " fault mid-flight. Not sending arrival event.");
             drone.setState(new FaultedState(dispatchEvent.getFault()));
             drone.setZoneID(0);
             return;

@@ -75,7 +75,7 @@ public class DroppingAgentState implements DroneState {
         EventLogger.info(drone.getDroneID(), "Dropping agent...", false);
 
         if (drone.getDroneInfo().getNozzleJam()){
-            EventLogger.info(drone.getDroneID(), "Nozzle jam detected. Going to faulty state", false);
+            EventLogger.warn(drone.getDroneID(), "Nozzle jam detected. Going to faulty state");
             drone.setState(new FaultedState(Faults.NOZZLE_JAMMED));
             return;
         }

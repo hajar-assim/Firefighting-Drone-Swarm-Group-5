@@ -111,7 +111,7 @@ public class DroneSubsystem {
      */
     public void setState(DroneState newState){
         info.setState(newState);
-        DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(getDroneID(), info);
+        DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(info);
         socket.send(droneUpdateEvent, getSchedulerAddress(), getSchedulerPort());
     }
 
@@ -280,7 +280,7 @@ public class DroneSubsystem {
      */
     private void registerWithScheduler() {
         try {
-            DroneUpdateEvent event = new DroneUpdateEvent(-1, this.info);
+            DroneUpdateEvent event = new DroneUpdateEvent(this.info);
             socket.send(event, schedulerAddress, schedulerPort);
             EventLogger.info(-1, "Sent registration to Scheduler. Drone Address: " + InetAddress.getLocalHost() + ", Drone Port: " + socket.getSocket().getLocalPort(), false);
             event = (DroneUpdateEvent) socket.receive();

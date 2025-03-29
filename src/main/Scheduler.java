@@ -359,7 +359,11 @@ public class Scheduler {
             }
 
             // Log drone update
-            EventLogger.info(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName(), false);
+            if (drone.getState() instanceof FaultedState) {
+                EventLogger.warn(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName());
+            } else {
+                EventLogger.info(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName(), false);
+            }
 
             // Check for faulted state
             if (drone.getState() instanceof FaultedState state) {
@@ -405,7 +409,7 @@ public class Scheduler {
         cancelWatchdog(droneID);
         IncidentEvent incidentEvent = droneAssignments.remove(droneID);
 
-        EventLogger.info(EventLogger.NO_ID, "Re‑queuing Incident " + incidentEvent.toString() + " for reassignment.", false);
+        EventLogger.info(EventLogger.NO_ID, "Re‑queuing Incident " + incidentEvent.toString() + " for reassignment.", true);
         incidentEvent.setFault(Faults.NONE);
         unassignedIncidents.add(incidentEvent);
 
