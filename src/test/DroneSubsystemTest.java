@@ -188,13 +188,13 @@ public class DroneSubsystemTest {
         int droneID = 1;
         droneInfo.setDroneID(droneID);
         int droneReceivePort = droneInfo.getPort();
-        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
+        new EventSocket().send(new DroneUpdateEvent(droneInfo), localhost, droneReceivePort);
         Thread.sleep(200);
 
         assertTrue("Drone should be running", drone.getRunning());
 
         // Send a drone dispatch to base event to stop drone
-        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE), localhost, droneReceivePort);
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE), localhost, droneReceivePort);
         Thread.sleep(200);
 
         assertFalse("Drone should be stopped", drone.getRunning());
@@ -219,13 +219,13 @@ public class DroneSubsystemTest {
         int droneID = 1;
         droneInfo.setDroneID(droneID);
         int droneReceivePort = droneInfo.getPort();
-        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
+        new EventSocket().send(new DroneUpdateEvent(droneInfo), localhost, droneReceivePort);
 
         DroneUpdateEvent update = (DroneUpdateEvent) schedulerSocket.receive();
         assertTrue(update.getDroneInfo().getState() instanceof IdleState);
 
         // Send fault event
-        new EventSocket().send(new DroneDispatchEvent(1, new Point2D.Double(1,1), true, Faults.DRONE_STUCK_IN_FLIGHT), localhost, droneReceivePort);
+        new EventSocket().send(new DroneDispatchEvent(1, new Point2D.Double(1,1), Faults.DRONE_STUCK_IN_FLIGHT), localhost, droneReceivePort);
 
         // Check that drone is flying
         update = (DroneUpdateEvent) schedulerSocket.receive();
@@ -237,7 +237,7 @@ public class DroneSubsystemTest {
 
 
         // Send a drone dispatch to base event to stop drone
-        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE), localhost, droneReceivePort);
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE), localhost, droneReceivePort);
         Thread.sleep(200);
         assertFalse("Drone should be stopped", drone.getRunning());
         droneThread.join(1000);
@@ -261,13 +261,13 @@ public class DroneSubsystemTest {
         int droneID = 1;
         droneInfo.setDroneID(droneID);
         int droneReceivePort = droneInfo.getPort();
-        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
+        new EventSocket().send(new DroneUpdateEvent(droneInfo), localhost, droneReceivePort);
 
         DroneUpdateEvent update = (DroneUpdateEvent) schedulerSocket.receive();
         assertTrue(update.getDroneInfo().getState() instanceof IdleState);
 
         // Send fault event
-        new EventSocket().send(new DroneDispatchEvent(1, new Point2D.Double(1,1), true, Faults.NOZZLE_JAMMED), localhost, droneReceivePort);
+        new EventSocket().send(new DroneDispatchEvent(1, new Point2D.Double(1,1),  Faults.NOZZLE_JAMMED), localhost, droneReceivePort);
 
         // Check that drone is flying
         update = (DroneUpdateEvent) schedulerSocket.receive();
@@ -278,7 +278,7 @@ public class DroneSubsystemTest {
         assertTrue(update.getDroneInfo().getState() instanceof FaultedState);
 
         // Send a drone stop event
-        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE), localhost, droneReceivePort);
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE), localhost, droneReceivePort);
         Thread.sleep(200);
         System.out.println(drone.getRunning());
         assertFalse("Drone should be stopped", drone.getRunning());
