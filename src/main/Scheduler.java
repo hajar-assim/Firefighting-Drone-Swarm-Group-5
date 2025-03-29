@@ -362,7 +362,7 @@ public class Scheduler {
             if (drone.getState() instanceof FaultedState state) {
                 switch (state.getFaultDescription()){
                     case NOZZLE_JAMMED -> handleNozzleJammedDrone(droneID);
-                    case DRONE_STUCK_IN_FLIGHT -> handleTransientDroneFailure(droneID);
+                    case DRONE_STUCK_IN_FLIGHT -> handleTransientDroneFailure(droneID, true);
                 }
             }
         }
@@ -397,7 +397,7 @@ public class Scheduler {
      *
      * @param droneID The ID of drone declared stuck
      */
-    private void handleTransientDroneFailure(int droneID) {
+    private void handleTransientDroneFailure(int droneID, boolean dispatchToBase) {
         // Remove stuck drone from incident
         IncidentEvent incidentEvent = droneAssignments.remove(droneID);
 
@@ -405,8 +405,10 @@ public class Scheduler {
         incidentEvent.setFault(Faults.NONE);
         unassignedIncidents.add(incidentEvent);
 
-        DroneDispatchEvent returnToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE);
-        sendToDrone(returnToBase, droneID);
+        if (dispatchToBase){
+            DroneDispatchEvent returnToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE);
+            sendToDrone(returnToBase, droneID);
+        }
     }
 
     public void startWatchdog(int droneID, double waitTime) {
@@ -419,7 +421,7 @@ public class Scheduler {
 
                 EventLogger.warn(EventLogger.NO_ID, "Packet Loss occurred during handling of Incident: " + incident.toString());
                 incident.setFault(Faults.NONE);
-                this.handleTransientDroneFailure(droneID);
+                this.handleTransientDroneFailure(droneID, false);
             } catch (InterruptedException ignored) {
             } finally {
                 watchdogs.remove(droneID); // Cleanup
