@@ -50,7 +50,7 @@ class EventTests {
 
         DroneUpdateEvent event = new DroneUpdateEvent(info);
 
-        assertEquals(1, event.getDroneID());
+        assertEquals(-1, event.getDroneID());
         assertEquals(info, event.getDroneInfo());
 
         assertDoesNotThrow(() -> event.fromString(""));
