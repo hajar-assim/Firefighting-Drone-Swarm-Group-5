@@ -98,13 +98,13 @@ public class FireIncidentSubsystem {
 
                 // Create IncidentEvent with injected fault
                 IncidentEvent incident = new IncidentEvent(timestamp, zoneId, eventType, severity, fault);
-                EventLogger.info(EventLogger.NO_ID, "New incident detected: {" + incident + "}");
+                EventLogger.info(EventLogger.NO_ID, "New incident detected: {" + incident + "}", true);
 
                 socket.send(incident, schedulerAddress, schedulerPort);
                 activeFires.add(zoneId);
             }
 
-            EventLogger.info(EventLogger.NO_ID, "All fires reported, waiting for all fires to be extinguished...\n");
+            EventLogger.info(EventLogger.NO_ID, "All fires reported, waiting for all fires to be extinguished...\n", false);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -141,7 +141,7 @@ public class FireIncidentSubsystem {
     private void removeFire(int zoneID) {
         if (activeFires.contains(zoneID)) {
             activeFires.remove(zoneID);
-            EventLogger.info(EventLogger.NO_ID, "Fire extinguished at Zone " + zoneID);
+            EventLogger.info(EventLogger.NO_ID, "Fire extinguished at Zone " + zoneID, true);
         }
     }
 
@@ -154,12 +154,12 @@ public class FireIncidentSubsystem {
     private void waitForFiresToBeExtinguished() {
         while (!activeFires.isEmpty()) {
             IncidentEvent event = (IncidentEvent) socket.receive();
-            EventLogger.info(EventLogger.NO_ID, "Received event: " + event);
+            EventLogger.info(EventLogger.NO_ID, "Received event: " + event, false);
 
             if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                 removeFire(event.getZoneID());
             } else {
-                EventLogger.info(EventLogger.NO_ID, "Scheduler Response: {" + event + "}");
+                EventLogger.info(EventLogger.NO_ID, "Scheduler Response: {" + event + "}", false);
             }
         }
     }
@@ -177,7 +177,7 @@ public class FireIncidentSubsystem {
 
         // only send EVENTS_DONE once all fires are extinguished
         IncidentEvent noMoreIncidents = new IncidentEvent("", 0, EventType.EVENTS_DONE, Severity.NONE, Faults.NONE);
-        EventLogger.info(EventLogger.NO_ID, "All fires extinguished. Sending EVENTS_DONE.");
+        EventLogger.info(EventLogger.NO_ID, "All fires extinguished. Sending EVENTS_DONE.", true);
         socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 
         socket.getSocket().close();
