@@ -11,6 +11,9 @@ import java.net.InetAddress;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import subsystems.drone.states.*;
+import subsystems.fire_incident.Faults;
+
 import static org.junit.Assert.*;
 
 public class DroneSubsystemTest {
@@ -84,7 +87,7 @@ public class DroneSubsystemTest {
 
     @Test
     public void testSetState() throws Exception {
-        DroneState testState = new TestDroneState();
+        IdleState testState = new IdleState();
         drone.setState(testState);
         Event receivedEvent = schedulerSocket.receive();
         assertTrue(receivedEvent instanceof DroneUpdateEvent);
@@ -165,42 +168,139 @@ public class DroneSubsystemTest {
         assertEquals(expected, DroneSubsystem.timeToZone(start, end), 0.001);
     }
 
-//    @Test(timeout = 5000)
-//    public void testRun() throws Exception {
-//        // Start drone thread
-//        Thread droneThread = new Thread(() -> {
-//            try {
-//                drone.run();
-//            } catch (Exception e) {
-//                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
-//            }
-//        });
-//
-//        drone.setRunning(true);
-//        droneThread.start();
-//
-//        Thread.sleep(200);
-//        assertTrue("Drone should be running", drone.getRunning());
-//
-//        //shutdown
-//        drone.setRunning(false);
-//
-//        // Send an event to drone's receive port to unblock receive()
-//        int droneID = drone.getDroneID();
-//        int droneReceivePort = 6000 + droneID;
-//        DroneInfo droneInfo = new DroneInfo(localhost, 4001);
-//        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
-//
-//        droneThread.join(1000);
-//        assertFalse("Drone should be stopped", drone.getRunning());
-//    }
+    @Test
+    public void testRun() throws Exception {
+        // Start drone thread
+        Thread droneThread = new Thread(() -> {
+            try {
+                drone.run();
+            } catch (Exception e) {
+                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
+            }
+        });
 
+        droneThread.start();
 
-    // Test state class for testing state transitions and event handling in DroneSubsystem class
-    private static class TestDroneState implements DroneState {
-        public void handleEvent(DroneSubsystem drone, Event event) {}
-        public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {}
-        public void travel(DroneSubsystem drone) {}
-        public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {}
+        // Send an event to register drone
+        DroneInfo droneInfo = drone.getDroneInfo();
+        int droneID = 1;
+        droneInfo.setDroneID(droneID);
+        int droneReceivePort = droneInfo.getPort();
+        new EventSocket().send(new DroneUpdateEvent(droneInfo), localhost, droneReceivePort);
+        Thread.sleep(200);
+
+        assertTrue("Drone should be running", drone.getRunning());
+
+        // Send a drone dispatch to base event to stop drone
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE), localhost, droneReceivePort);
+        Thread.sleep(200);
+
+        assertFalse("Drone should be stopped", drone.getRunning());
+        droneThread.join(1000);
+    }
+
+    @Test
+    public void testStuckFault() throws Exception {
+        // Start drone thread
+        Thread droneThread = new Thread(() -> {
+            try {
+                drone.run();
+            } catch (Exception e) {
+                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
+            }
+        });
+
+        droneThread.start();
+
+        // Send an event to register drone
+        DroneInfo droneInfo = drone.getDroneInfo();
+        int droneID = 1;
+        droneInfo.setDroneID(droneID);
+        int droneReceivePort = droneInfo.getPort();
+        new EventSocket().send(new DroneUpdateEvent(droneInfo), localhost, droneReceivePort);
+
+        DroneUpdateEvent update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof IdleState);
+
+        // Send fault event
+        new EventSocket().send(new DroneDispatchEvent(1, new Point2D.Double(1,1), Faults.DRONE_STUCK_IN_FLIGHT), localhost, droneReceivePort);
+
+        // Check that drone is flying
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof OnRouteState);
+
+        // Check that drone has faulted
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof FaultedState);
+
+        // Send a drone dispatch to base event
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE), localhost, droneReceivePort);
+
+        // Check that drone has recovered and is on route to base
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof OnRouteState);
+
+        // Check that drone is idle
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof IdleState);
+
+        // Shutdown drone
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE), localhost, droneReceivePort);
+        Thread.sleep(200);
+        assertFalse("Drone should be stopped", drone.getRunning());
+        droneThread.join(1000);
+    }
+
+    @Test
+    public void testJamFault() throws Exception {
+        // Start drone thread
+        Thread droneThread = new Thread(() -> {
+            try {
+                drone.run();
+            } catch (Exception e) {
+                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
+            }
+        });
+
+        droneThread.start();
+
+        // Send an event to register drone
+        DroneInfo droneInfo = drone.getDroneInfo();
+        int droneID = 1;
+        droneInfo.setDroneID(droneID);
+        int droneReceivePort = droneInfo.getPort();
+        new EventSocket().send(new DroneUpdateEvent(droneInfo), localhost, droneReceivePort);
+
+        DroneUpdateEvent update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof IdleState);
+
+        // Send fault event
+        new EventSocket().send(new DroneDispatchEvent(1, new Point2D.Double(1,1), Faults.NOZZLE_JAMMED), localhost, droneReceivePort);
+
+        // Check that drone is flying
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof OnRouteState);
+
+        // Check that drone has arrived
+        DroneArrivedEvent arrived = (DroneArrivedEvent) schedulerSocket.receive();
+        assertEquals(1, arrived.getZoneID());
+
+        // Send dropping agent event
+        new EventSocket().send(new DropAgentEvent(10), localhost, droneReceivePort);
+
+        // Check that drone is dropping agent
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof DroppingAgentState);
+
+        // Check that drone has faulted
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof FaultedState);
+
+        // Send a drone stop event
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NOZZLE_JAMMED), localhost, droneReceivePort);
+        Thread.sleep(200);
+        assertFalse("Drone should be stopped", drone.getRunning());
+
+        droneThread.join(1000);
     }
 }
