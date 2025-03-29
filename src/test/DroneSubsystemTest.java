@@ -11,6 +11,11 @@ import java.net.InetAddress;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import subsystems.drone.states.FaultedState;
+import subsystems.drone.states.IdleState;
+import subsystems.drone.states.OnRouteState;
+import subsystems.fire_incident.Faults;
+
 import static org.junit.Assert.*;
 
 public class DroneSubsystemTest {
@@ -84,7 +89,7 @@ public class DroneSubsystemTest {
 
     @Test
     public void testSetState() throws Exception {
-        DroneState testState = new TestDroneState();
+        IdleState testState = new IdleState();
         drone.setState(testState);
         Event receivedEvent = schedulerSocket.receive();
         assertTrue(receivedEvent instanceof DroneUpdateEvent);
@@ -165,7 +170,7 @@ public class DroneSubsystemTest {
         assertEquals(expected, drone.timeToZone(start, end), 0.001);
     }
 
-    @Test(timeout = 5000)
+    @Test
     public void testRun() throws Exception {
         // Start drone thread
         Thread droneThread = new Thread(() -> {
@@ -176,7 +181,37 @@ public class DroneSubsystemTest {
             }
         });
 
-        drone.setRunning(true);
+        droneThread.start();
+
+        // Send an event to register drone
+        DroneInfo droneInfo = drone.getDroneInfo();
+        int droneID = 1;
+        droneInfo.setDroneID(droneID);
+        int droneReceivePort = droneInfo.getPort();
+        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
+        Thread.sleep(200);
+
+        assertTrue("Drone should be running", drone.getRunning());
+
+        // Send a drone dispatch to base event to stop drone
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE), localhost, droneReceivePort);
+        Thread.sleep(200);
+
+        assertFalse("Drone should be stopped", drone.getRunning());
+        droneThread.join(1000);
+    }
+
+    @Test
+    public void testStuckFault() throws Exception {
+        // Start drone thread
+        Thread droneThread = new Thread(() -> {
+            try {
+                drone.run();
+            } catch (Exception e) {
+                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
+            }
+        });
+
         droneThread.start();
 
         // Send an event to register drone
@@ -186,25 +221,68 @@ public class DroneSubsystemTest {
         int droneReceivePort = droneInfo.getPort();
         new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
 
+        DroneUpdateEvent update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof IdleState);
+
+        // Send fault event
+        new EventSocket().send(new DroneDispatchEvent(1, new Point2D.Double(1,1), true, Faults.DRONE_STUCK_IN_FLIGHT), localhost, droneReceivePort);
+
+        // Check that drone is flying
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof OnRouteState);
+
+        // Check that drone has faulted
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof FaultedState);
+
+
+        // Send a drone dispatch to base event to stop drone
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE), localhost, droneReceivePort);
         Thread.sleep(200);
-        assertTrue("Drone should be running", drone.getRunning());
-
-        //shutdown
-        drone.setRunning(false);
-
-        // Send another event to unblock receive()
-        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
-
-        droneThread.join(1000);
         assertFalse("Drone should be stopped", drone.getRunning());
+        droneThread.join(1000);
     }
 
+    @Test
+    public void testJamFault() throws Exception {
+        // Start drone thread
+        Thread droneThread = new Thread(() -> {
+            try {
+                drone.run();
+            } catch (Exception e) {
+                System.out.println("Drone thread exited: " + e.getClass().getSimpleName());
+            }
+        });
 
-    // Test state class for testing state transitions and event handling in DroneSubsystem class
-    private static class TestDroneState implements DroneState {
-        public void handleEvent(DroneSubsystem drone, Event event) {}
-        public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {}
-        public void travel(DroneSubsystem drone) {}
-        public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {}
+        droneThread.start();
+
+        // Send an event to register drone
+        DroneInfo droneInfo = drone.getDroneInfo();
+        int droneID = 1;
+        droneInfo.setDroneID(droneID);
+        int droneReceivePort = droneInfo.getPort();
+        new EventSocket().send(new DroneUpdateEvent(droneID, droneInfo), localhost, droneReceivePort);
+
+        DroneUpdateEvent update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof IdleState);
+
+        // Send fault event
+        new EventSocket().send(new DroneDispatchEvent(1, new Point2D.Double(1,1), true, Faults.NOZZLE_JAMMED), localhost, droneReceivePort);
+
+        // Check that drone is flying
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof OnRouteState);
+
+        // Check that done has faulted
+        update = (DroneUpdateEvent) schedulerSocket.receive();
+        assertTrue(update.getDroneInfo().getState() instanceof FaultedState);
+
+        // Send a drone stop event
+        new EventSocket().send(new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE), localhost, droneReceivePort);
+        Thread.sleep(200);
+        System.out.println(drone.getRunning());
+        assertFalse("Drone should be stopped", drone.getRunning());
+
+        droneThread.join(1000);
     }
 }

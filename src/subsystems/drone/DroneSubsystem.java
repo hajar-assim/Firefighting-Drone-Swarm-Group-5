@@ -242,7 +242,9 @@ public class DroneSubsystem {
         registerWithScheduler();
         while (getRunning()) {
             Event event = socket.receive();
+            System.out.println(event);
             getState().handleEvent(this, event);
+            System.out.println(getRunning());
         }
         EventLogger.info(getDroneID(), "No more incidents, shutting down...");
         socket.getSocket().close();
