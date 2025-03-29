@@ -6,8 +6,6 @@ import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneDispatchEvent;
 import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
-import subsystems.drone.states.DroneState;
-import subsystems.drone.states.IdleState;
 import subsystems.fire_incident.Faults;
 
 import java.awt.geom.Point2D;
@@ -33,7 +31,7 @@ class EventTests {
     @DisplayName("Test DroneDispatchEvent class")
     void testDroneDispatchEvent() {
         Point2D coords = new Point2D.Double(100.0, 200.0);
-        DroneDispatchEvent event = new DroneDispatchEvent(200, coords, false, Faults.NONE);
+        DroneDispatchEvent event = new DroneDispatchEvent(200, coords, Faults.NONE);
         assertEquals(200, event.getZoneID());
         assertEquals(coords, event.getCoords());
         event.fromString("");

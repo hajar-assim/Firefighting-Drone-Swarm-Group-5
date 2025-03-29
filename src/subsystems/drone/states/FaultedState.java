@@ -1,19 +1,21 @@
 package subsystems.drone.states;
 
+import logger.EventLogger;
 import subsystems.Event;
 import subsystems.drone.DroneSubsystem;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.events.DroneDispatchEvent;
+import subsystems.fire_incident.Faults;
 
 public class FaultedState implements DroneState {
-    private final String faultDescription;
+    private final Faults faultDescription;
 
     /**
      * Constructs a new FaultedState with a human‑readable description of the fault.
      *
      * @param faultDescription a description of why the drone is faulted
      */
-    public FaultedState(String faultDescription) {
+    public FaultedState(Faults faultDescription) {
         this.faultDescription = faultDescription;
     }
 
@@ -25,7 +27,23 @@ public class FaultedState implements DroneState {
      */
     @Override
     public void handleEvent(DroneSubsystem drone, Event event) {
-        // No operation since drone is faulted
+        if (event instanceof DroneDispatchEvent){
+            if (((DroneDispatchEvent) event).getZoneID() == 0 && ((DroneDispatchEvent) event).getFault() != Faults.NONE){
+                // unrecoverable fault, shut down the drone
+                drone.setRunning(false);
+            }
+            else {
+
+                // Simulate recovering
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                EventLogger.info(drone.getDroneID(), "[Drone " + drone.getDroneID() + "] Recovered from fault, returning to base");
+                dispatch(drone, (DroneDispatchEvent) event);
+            }
+        }
     }
 
     /**
@@ -36,7 +54,9 @@ public class FaultedState implements DroneState {
      */
     @Override
     public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot dispatch, drone is faulted (" + faultDescription + ").");
+        OnRouteState onRoute = new OnRouteState(event);
+        drone.setState(onRoute);
+        drone.getState().travel(drone);
     }
 
     /**
@@ -46,7 +66,7 @@ public class FaultedState implements DroneState {
      */
     @Override
     public void travel(DroneSubsystem drone) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot travel, drone is faulted (" + faultDescription + ").");
+        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot travel, drone is faulted (" + faultDescription.toString() + ").");
     }
 
     /**
@@ -57,7 +77,7 @@ public class FaultedState implements DroneState {
      */
     @Override
     public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {
-        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot drop agent, drone is faulted (" + faultDescription + ").");
+        System.out.println("[DRONE " + drone.getDroneID() + "] Cannot drop agent, drone is faulted (" + faultDescription.toString() + ").");
     }
 
     /**
@@ -67,6 +87,10 @@ public class FaultedState implements DroneState {
      */
     @Override
     public String toString() {
-        return "FaultedState: " + faultDescription;
+        return "FaultedState: " + faultDescription.toString();
+    }
+
+    public Faults getFaultDescription(){
+        return this.faultDescription;
     }
 }

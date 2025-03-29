@@ -162,7 +162,7 @@ public class DroneSubsystemTest {
         Point2D start = new Point2D.Double(0, 0);
         Point2D end = new Point2D.Double(100, 0);
         double expected = ((100 - 46.875) / 15) + 6.25;
-        assertEquals(expected, drone.timeToZone(start, end), 0.001);
+        assertEquals(expected, DroneSubsystem.timeToZone(start, end), 0.001);
     }
 
 //    @Test(timeout = 5000)

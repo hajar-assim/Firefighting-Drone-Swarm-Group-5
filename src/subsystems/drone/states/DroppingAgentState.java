@@ -28,6 +28,9 @@ public class DroppingAgentState implements DroneState {
     public void handleEvent(DroneSubsystem drone, Event event) {
         if (event instanceof DropAgentEvent) {
             dropAgent(drone, (DropAgentEvent) event);
+        } else if (event instanceof DroneDispatchEvent) {
+            EventLogger.info(drone.getDroneID(), "Redirecting to a new target zone.");
+            dispatch(drone, (DroneDispatchEvent) event);
         }
     }
 
@@ -41,7 +44,9 @@ public class DroppingAgentState implements DroneState {
      */
     @Override
     public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {
-        EventLogger.warn(drone.getDroneID(), "Cannot dispatch while dropping agent.");
+        OnRouteState onRoute = new OnRouteState(event);
+        drone.setState(onRoute);
+        drone.getState().travel(drone);
     }
 
 
@@ -69,6 +74,12 @@ public class DroppingAgentState implements DroneState {
     public void dropAgent(DroneSubsystem drone, DropAgentEvent event) {
         EventLogger.info(drone.getDroneID(), "Dropping agent...");
 
+        if (drone.getDroneInfo().getNozzleJam()){
+            EventLogger.info(drone.getDroneID(), "Nozzle jam detected. Going to faulty state");
+            drone.setState(new FaultedState(Faults.NOZZLE_JAMMED));
+            return;
+        }
+
         int volume = event.getVolume();
         try {
             Thread.sleep((long) volume * Scheduler.sleepMultiplier);
@@ -83,7 +94,7 @@ public class DroppingAgentState implements DroneState {
         // transition to On route and Refill
         EventLogger.info(drone.getDroneID(), "Returning to base to refill.");
 
-        OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0,0), false, Faults.NONE));
+        OnRouteState toBase = new OnRouteState(new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE));
         drone.setZoneID(0);
         drone.setState(toBase);
         drone.getState().travel(drone);

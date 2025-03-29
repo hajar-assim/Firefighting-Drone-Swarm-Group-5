@@ -19,6 +19,7 @@ public class DroneInfo implements Serializable {
     private int waterLevel;
     private InetAddress address;
     private Integer port;
+    private boolean nozzleJam;
 
 
     /**
@@ -39,6 +40,7 @@ public class DroneInfo implements Serializable {
         this.waterLevel = 15;
         this.address = address;
         this.port = port;
+        this.nozzleJam = false;
     }
 
     /**
@@ -179,5 +181,13 @@ public class DroneInfo implements Serializable {
      */
     public Integer getPort(){
         return this.port;
+    }
+
+    public void setNozzleJam(boolean set){
+        this.nozzleJam = set;
+    }
+
+    public boolean getNozzleJam(){
+        return this.nozzleJam;
     }
 }

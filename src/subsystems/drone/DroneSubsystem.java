@@ -227,7 +227,7 @@ public class DroneSubsystem {
      * @param endCoords   The target coordinates.
      * @return The estimated flight time in seconds.
      */
-    public double timeToZone(Point2D startCoords, Point2D endCoords) {
+    public static double timeToZone(Point2D startCoords, Point2D endCoords) {
         double distance = startCoords.distance(endCoords);
         return ((distance - 46.875) / 15 + 6.25);
     }

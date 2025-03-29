@@ -61,7 +61,9 @@ public class OnRouteState implements DroneState {
      */
     @Override
     public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {
-        EventLogger.warn(drone.getDroneID(), "Cannot dispatch while on route.");
+        OnRouteState onRoute = new OnRouteState(event);
+        drone.setState(onRoute);
+        drone.getState().travel(drone);
     }
 
 
@@ -75,7 +77,7 @@ public class OnRouteState implements DroneState {
     @Override
     public void travel(DroneSubsystem drone) {
         Point2D targetCoords = dispatchEvent.getCoords();
-        double flightTime = drone.timeToZone(drone.getCoordinates(), targetCoords);
+        double flightTime = DroneSubsystem.timeToZone(drone.getCoordinates(), targetCoords);
 
         boolean returningToBase = dispatchEvent.getZoneID() == 0;
         String onRoute = returningToBase ? "Base" : "Zone: " + drone.getZoneID();
@@ -91,18 +93,13 @@ public class OnRouteState implements DroneState {
         }
 
         // Check if a fault is to be simulated
-        if (dispatchEvent.isSimulateFault()) {
-            Faults injectedFault = dispatchEvent.getFault();
-            String faultDescription;
-            if (injectedFault == Faults.NOZZLE_JAMMED) {
-                faultDescription = "NOZZLE_JAMMED";
-            } else {
-                faultDescription = "DRONE_STUCK_IN_FLIGHT";
-            }
-            EventLogger.info(drone.getDroneID(), "Simulating " + faultDescription + " fault mid-flight. Not sending arrival event.");
-            // Transition to FaultedState
-            drone.setState(new FaultedState(faultDescription));
+        if(dispatchEvent.getFault() == Faults.DRONE_STUCK_IN_FLIGHT){
+            EventLogger.info(drone.getDroneID(), "Simulating " + dispatchEvent.getFault().toString() + " fault mid-flight. Not sending arrival event.");
+            drone.setState(new FaultedState(dispatchEvent.getFault()));
+            drone.setZoneID(0);
             return;
+        } else if (dispatchEvent.getFault() == Faults.NOZZLE_JAMMED) {
+            drone.getDroneInfo().setNozzleJam(true);
         }
 
         drone.setCoordinates(targetCoords);
