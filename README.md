@@ -154,6 +154,58 @@ The **Scheduler** now coordinates multiple drones and assigns them tasks to ensu
 
 ***
 ## Iteration #4
+
+### Overview
+Iteration 4 introduces **fault detection and handling** capabilities in the system. Drones are now able to simulate and respond to both **hard faults** and **transient faults**. The Scheduler has been updated to detect these faults, respond appropriately, and reassign drones when necessary. Faults can now also be **injected via the input file**, allowing for controlled simulation and testing.
+
+---
+
+### Key Features Implemented
+
+#### Fault Injection Support
+- Extended the input CSV format to allow injection of faults per incident.
+- Supported fault types include:
+  - `DRONE_STUCK_IN_FLIGHT`
+  - `NOZZLE_JAMMED`
+  - `PACKET_LOSS`
+
+#### Fault Handling Logic
+- **Hard Faults** (e.g., `NOZZLE_JAMMED`) trigger permanent drone shutdown.
+- **Transient Faults** (e.g., `PACKET_LOSS`) are handled with graceful retry logic — the drone remains operational after the fault is resolved.
+- **Stuck in Flight** is detected using a timer — if a drone fails to send its arrival update in time, it is assumed to be stuck and marked faulty.
+
+#### Packet Loss Simulation
+- `PACKET_LOSS` fault causes intentional skipping of event transmissions (like `DroneArrivedEvent`), simulating unreliable networks.
+- Scheduler responds by re-queuing the fire incident after a timeout or missed confirmation.
+
+#### Incident Reassignment
+- If a drone is faulted mid-task, the related fire incident is re-queued and reassigned to another available drone.
+
+---
+
+### Updated & New Files
+
+- **events/**
+  - `Faults.java`: Enum listing supported fault types.
+
+- **fire_incident/**
+  - `FireIncidentSubsystem.java`: Updated to parse and send fault info from the CSV input.
+
+- **drone/**
+  - `DroneSubsystem.java`: Updated to simulate fault behavior during mission execution.
+  - `DroneInfo.java`: Can now be extended to track fault states and shutdown status.
+
+- **main/**
+  - `Scheduler.java`: Updated to detect faults, handle reassignment, and manage drone shutdowns gracefully.
+
+---
+
+### Diagrams
+- Added **timing diagrams** for:
+  - Nozzle jam fault handling
+  - Drone stuck-in-flight scenario
+- Diagrams illustrate how the system transitions between states and reassigns tasks in response to faults.
+
 ***
 ## Iteration #5
 ***
