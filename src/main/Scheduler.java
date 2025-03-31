@@ -13,6 +13,7 @@ import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
 import java.net.InetAddress;
 import java.net.SocketException;
@@ -34,6 +35,7 @@ public class Scheduler {
     private volatile boolean running = true;
     private final PriorityQueue<IncidentEvent> unassignedIncidents;
     private final Map<Integer, Thread> watchdogs = new ConcurrentHashMap<>();
+    private DroneSwarmDashboard dashboard;
 
 
     /**
@@ -48,6 +50,7 @@ public class Scheduler {
         this.fireSubsystemPort = fireSubsystemPort;
         this.dronesInfo = new HashMap<>();
         this.unassignedIncidents = new PriorityQueue<>(new IncidentEventComparator());
+        this.dashboard = new DroneSwarmDashboard();
 
         try {
             this.receiveSocket.getSocket().setSoTimeout(3000);
@@ -125,6 +128,12 @@ public class Scheduler {
      */
     private void storeZoneData(ZoneEvent event) {
         fireZones.put(event.getZoneID(), event.getCenter());
+
+        // Update the dashboard with the new zone data
+        Point start = convertToGrid(event.getStart());
+        Point end = convertToGrid(event.getEnd());
+        dashboard.markZone(event.getZoneID(), start, end);
+
         EventLogger.info(EventLogger.NO_ID, String.format(
                 "Stored fire zone {ZoneID: %d | Center: (%.1f, %.1f)}",
                 event.getZoneID(),
@@ -448,6 +457,17 @@ public class Scheduler {
     public void close() {
         if (receiveSocket != null) receiveSocket.close();
         if (sendSocket != null) sendSocket.close();
+    }
+
+    /**
+     * Converts real-world coordinates to grid coordinates for the GUI.
+     * @param realWorldPoint
+     * @return
+     */
+    private Point convertToGrid(Point2D realWorldPoint) {
+        int gridX = (int) (realWorldPoint.getX() / DroneSwarmDashboard.CELL_SIZE);
+        int gridY = (int) (realWorldPoint.getY() / DroneSwarmDashboard.CELL_SIZE);
+        return new Point(gridX, gridY);
     }
 
     /**

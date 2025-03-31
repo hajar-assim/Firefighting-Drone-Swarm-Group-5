@@ -2,6 +2,7 @@ package subsystems.fire_incident.events;
 
 import subsystems.Event;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
 
 /**
@@ -11,6 +12,8 @@ import java.awt.geom.Point2D;
 public class ZoneEvent extends Event {
     private int zoneID;
     private Point2D center;
+    private Point2D start;
+    private Point2D end;
 
     /**
      * Constructs a ZoneEvent with the specified zone ID, start coordinates, and end coordinates.
@@ -23,9 +26,10 @@ public class ZoneEvent extends Event {
     public ZoneEvent(int zoneID, String startCoordinates, String endCoordinates) {
         super(null);
         this.zoneID = zoneID;
-        this.center = this.getZoneCenter(startCoordinates, endCoordinates);
+        this.start = this.parseCoordinates(startCoordinates);
+        this.end = this.parseCoordinates(endCoordinates);
+        this.center = this.getZoneCenter(start, end);
     }
-
 
     /**
      * Gets the ID of the zone.
@@ -46,21 +50,32 @@ public class ZoneEvent extends Event {
         return center;
     }
 
+    /**
+     * Gets the start and end coordinates of the zone.
+     * @return
+     */
+    public Point2D getStart() {
+        return start;
+    }
+
+    /**
+     * Gets the end coordinates of the zone.
+     * @return
+     */
+    public Point2D getEnd() {
+        return end;
+    }
 
     /**
      * Calculates the center of the zone based on the start and end coordinates.
      *
-     * @param startCoordinates the start coordinates in the format "(x;y)"
-     * @param endCoordinates   the end coordinates in the format "(x;y)"
+     * @param start the start coordinate in a Point2D object
+     * @param end   the end coordinate in a Point2D object
      * @return the calculated center as a {@code Point2D} object
      */
-    private Point2D getZoneCenter(String startCoordinates, String endCoordinates) {
-        Point2D start = this.parseCoordinates(startCoordinates);
-        Point2D end = this.parseCoordinates(endCoordinates);
-
+    private Point2D getZoneCenter(Point2D start, Point2D end) {
         double midX = (start.getX() + end.getX()) / 2;
         double midY = (start.getY() + end.getY()) / 2;
-
         return new Point2D.Double(midX, midY);
     }
 
