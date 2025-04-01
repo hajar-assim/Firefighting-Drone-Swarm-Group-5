@@ -174,7 +174,9 @@ public class Scheduler {
         }
 
         EventLogger.info(EventLogger.NO_ID,"New fire incident at Zone " + event.getZoneID() + ". Requires " + event.getWaterFoamAmount() + "L of water.", true);
+        dashboard.updateZoneWater(event.getZoneID(), event.getWaterFoamAmount());
         dashboard.setZoneFireStatus(event.getZoneID(), DroneSwarmDashboard.FireStatus.ACTIVE);
+        dashboard.updateZoneSeverity(event.getZoneID(), event.getSeverity());
 
         if (assignDrone(event)) {
             event.setEventType(EventType.DRONE_DISPATCHED);
@@ -354,6 +356,8 @@ public class Scheduler {
             EventLogger.warn(EventLogger.NO_ID, "Fire at Zone " + incident.getZoneID() + " still needs " + remainingWater + "L of water to extinguish.");
             unassignedIncidents.add(incident);
         }
+
+        dashboard.updateZoneWater(incident.getZoneID(), remainingWater);
     }
 
     /**
