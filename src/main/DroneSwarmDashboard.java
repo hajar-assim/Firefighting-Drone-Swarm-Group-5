@@ -327,6 +327,9 @@ public class DroneSwarmDashboard extends JFrame {
             y += 25;
 
             drawLegendItem(g, DroneState.EXTINGUISHING.color, "D(n) Drone DROPPING_AGENT", y);
+            y += 25;
+
+            drawLegendItem(g, DroneState.FAULTED.color, "D(n) Drone FAULTED", y);
         }
 
         private void drawLegendItem(Graphics g, Color color, String label, int y) {
