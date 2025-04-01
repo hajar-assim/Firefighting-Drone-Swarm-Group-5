@@ -149,10 +149,8 @@ public class DroneSubsystem {
      */
     public void setCoordinates(Point2D coordinates) {
         info.setCoordinates(coordinates);
-        if(getZoneID() != 0){
-            DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(getDroneID(), getZoneID());
-            socket.send(arrivedEvent, schedulerAddress, schedulerPort);
-        }
+        DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(getDroneID(), getZoneID());
+        socket.send(arrivedEvent, schedulerAddress, schedulerPort);
     }
 
     /**
