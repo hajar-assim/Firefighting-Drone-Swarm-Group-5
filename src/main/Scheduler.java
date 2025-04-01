@@ -36,6 +36,8 @@ public class Scheduler {
     private final PriorityQueue<IncidentEvent> unassignedIncidents;
     private final Map<Integer, Thread> watchdogs = new ConcurrentHashMap<>();
     private DroneSwarmDashboard dashboard;
+    private Set<Integer> dronesReturningToBase = new HashSet<>();
+    private boolean shutdownPending = false;
 
 
     /**
@@ -151,13 +153,18 @@ public class Scheduler {
     public void handleIncidentEvent(IncidentEvent event) {
 
         if (event.getEventType() == EventType.EVENTS_DONE) {
-            EventLogger.info(EventLogger.NO_ID, "Received EVENTS_DONE. Dispatching all drones to base and terminating...", false);
+            EventLogger.info(EventLogger.NO_ID, "Received EVENTS_DONE. Dispatching all drones to base.", false);
             DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE);
 
+            shutdownPending = true;
+            dronesReturningToBase.clear();
+
             for (int droneID : this.dronesInfo.keySet()) {
+                dronesReturningToBase.add(droneID);
                 sendToDrone(dispatchToBase, droneID);
             }
-            running = false;
+
+            checkShutdownCondition();
             return;
         }
 
@@ -307,6 +314,12 @@ public class Scheduler {
             sendToDrone(dropEvent,droneID);
 
             startWatchdog(droneID, waterToDrop * 1000);
+        }
+
+        // check if it's one of the returning drones and if it's at base (0,0)
+        if (shutdownPending && dronesReturningToBase.contains(droneID) && isAtBase(dronesInfo.get(droneID).getCoordinates())) {
+            dronesReturningToBase.remove(droneID);
+            checkShutdownCondition();
         }
     }
 
@@ -482,6 +495,25 @@ public class Scheduler {
         int gridX = (int) Math.round((realWorldPoint.getX() / DroneSwarmDashboard.CELL_SIZE));
         int gridY = (int) Math.round((realWorldPoint.getY() / DroneSwarmDashboard.CELL_SIZE));
         return new Point(gridX, gridY);
+    }
+
+    /**
+     * Checks if the drone is at the base (0, 0).
+     * @param location
+     * @return
+     */
+    private boolean isAtBase(Point2D location) {
+        return location.distance(0, 0) < 0.001;
+    }
+
+    /**
+     * Checks if all drones have returned to base and if shutdown is pending.
+     */
+    private void checkShutdownCondition() {
+        if (shutdownPending && dronesReturningToBase.isEmpty()) {
+            EventLogger.info(EventLogger.NO_ID, "All drones returned to base. Terminating scheduler.", false);
+            running = false;
+        }
     }
 
     /**
