@@ -17,7 +17,7 @@ public class DroneSwarmDashboard extends JFrame {
 
     // drones
     private final Map<Integer, DroneRender> droneStates = new HashMap<>();
-
+    private boolean showFaultedDrones = true;
 
     // zones
     private final Map<Point, CellType> zoneMap = new HashMap<>();
@@ -82,15 +82,27 @@ public class DroneSwarmDashboard extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
 
+        JCheckBox showFaultedToggle = new JCheckBox("Show Faulted Drones");
+        showFaultedToggle.setSelected(showFaultedDrones);
+        showFaultedToggle.addActionListener(e -> {
+            showFaultedDrones = showFaultedToggle.isSelected();
+            repaint();
+        });
+
         setLayout(new BorderLayout());
 
         LegendPanel legendPanel = new LegendPanel();
         GridPanel gridPanel = new GridPanel();
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BorderLayout());
+        rightPanel.add(showFaultedToggle, BorderLayout.NORTH);
+        rightPanel.add(legendPanel, BorderLayout.CENTER);
+
 
         setLayout(new BorderLayout());
         add(basePanel, BorderLayout.WEST);
+        add(rightPanel, BorderLayout.EAST);
         add(gridPanel, BorderLayout.CENTER);
-        add(legendPanel, BorderLayout.EAST);
 
         pack();
         setVisible(true);
@@ -173,6 +185,10 @@ public class DroneSwarmDashboard extends JFrame {
             for (Map.Entry<Integer, DroneRender> entry : droneStates.entrySet()) {
                 int droneID = entry.getKey();
                 DroneRender drone = entry.getValue();
+
+                if (drone.state == DroneState.FAULTED && !showFaultedDrones) {
+                    continue; // skip drawing faulted drone
+                }
 
                 int px = drone.gridPos.x * CELL_SIZE + PADDING;
                 int py = drone.gridPos.y * CELL_SIZE + PADDING;
