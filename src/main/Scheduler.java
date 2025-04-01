@@ -129,7 +129,7 @@ public class Scheduler {
     private void storeZoneData(ZoneEvent event) {
         fireZones.put(event.getZoneID(), event.getCenter());
 
-        // Update the dashboard with the new zone data
+        // update the dashboard with the new zone data
         Point start = convertToGrid(event.getStart());
         Point end = convertToGrid(event.getEnd());
         dashboard.markZone(event.getZoneID(), start, end);
@@ -479,8 +479,8 @@ public class Scheduler {
      * @return
      */
     private Point convertToGrid(Point2D realWorldPoint) {
-        int gridX = (int) (realWorldPoint.getX() / DroneSwarmDashboard.CELL_SIZE);
-        int gridY = (int) (realWorldPoint.getY() / DroneSwarmDashboard.CELL_SIZE);
+        int gridX = (int) Math.round((realWorldPoint.getX() / DroneSwarmDashboard.CELL_SIZE));
+        int gridY = (int) Math.round((realWorldPoint.getY() / DroneSwarmDashboard.CELL_SIZE));
         return new Point(gridX, gridY);
     }
 
