@@ -2,10 +2,7 @@ package subsystems.drone.states;
 
 import logger.EventLogger;
 import main.Scheduler;
-import subsystems.drone.events.DroneArrivedEvent;
-import subsystems.drone.events.DroneDispatchEvent;
-import subsystems.drone.events.DroneUpdateEvent;
-import subsystems.drone.events.DropAgentEvent;
+import subsystems.drone.events.*;
 import subsystems.Event;
 import subsystems.drone.DroneSubsystem;
 import subsystems.fire_incident.Faults;
@@ -97,6 +94,15 @@ public class OnRouteState implements DroneState {
 
             drone.setCoordinates(new Point2D.Double(x, y));
 
+            if (i == steps / 2) {
+                // check if fire still needs service
+                if (!returningToBase && drone.getWaterLevel() > 0) {
+                    EventLogger.info(drone.getDroneID(), "Checking if fire at Zone " + drone.getZoneID() + " still needs water mid-flight...", false);
+                    DroneReassignRequestEvent reassignRequest = new DroneReassignRequestEvent(drone.getDroneID());
+                    drone.getSocket().send(reassignRequest, drone.getSchedulerAddress(), drone.getSchedulerPort());
+                }
+            }
+
             // notify scheduler (GUI)
             DroneUpdateEvent updateEvent = new DroneUpdateEvent(drone.getDroneInfo());
             drone.getSocket().send(updateEvent, drone.getSchedulerAddress(), drone.getSchedulerPort());
@@ -119,6 +125,7 @@ public class OnRouteState implements DroneState {
         // Handle nozzle jam before arrival
         if (dispatchEvent.getFault() == Faults.NOZZLE_JAMMED) {
             drone.getDroneInfo().setNozzleJam(true);
+            dispatchEvent.setFault(Faults.NONE);
         }
 
         // final snap to exact coords (just in case)

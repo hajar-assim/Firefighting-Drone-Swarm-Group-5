@@ -48,6 +48,13 @@ public class DroneDispatchEvent extends Event {
     }
 
     /**
+     * Returns the specific fault to simulate.
+     */
+    public void setFault(Faults fault) {
+        this.fault= fault;
+    }
+
+    /**
      * Gets the coordinates of the dispatch location.
      *
      * @return the coordinates as a {@code Point2D} object

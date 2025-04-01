@@ -57,7 +57,7 @@ public abstract class Event implements Serializable {
      */
     public String getTime() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-        return LocalDateTime.parse(this.getTimeStamp(), DateTimeFormatter.ISO_LOCAL_DATE_TIME).format(formatter);
+        return LocalTime.parse(this.getTimeStamp(), formatter).format(formatter);
     }
 
     /**
