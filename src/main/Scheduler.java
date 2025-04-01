@@ -292,19 +292,22 @@ public class Scheduler {
      */
     private void handleDroneArrival(DroneArrivedEvent event) {
         int droneID = event.getDroneID();
-        cancelWatchdog(droneID);
+        if (droneID == 0) {
+            EventLogger.info(EventLogger.NO_ID, "Drone " + droneID + " has returned to base.", false);
+            dashboard.updateDronePosition(droneID, new Point(0, 0), DroneSwarmDashboard.DroneState.IDLE);
+        } else {
+            cancelWatchdog(droneID);
+            IncidentEvent incident = droneAssignments.get(droneID);
+            // calculate how much water to drop
+            int waterToDrop = Math.min(incident.getWaterFoamAmount(), dronesInfo.get(droneID).getWaterLevel());
+            EventLogger.info(EventLogger.NO_ID, "Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + incident.getZoneID(), false);
+            // send drop event to drone
+            DropAgentEvent dropEvent = new DropAgentEvent(waterToDrop);
 
+            sendToDrone(dropEvent,droneID);
 
-        IncidentEvent incident = droneAssignments.get(droneID);
-        // calculate how much water to drop
-        int waterToDrop = Math.min(incident.getWaterFoamAmount(), dronesInfo.get(droneID).getWaterLevel());
-        EventLogger.info(EventLogger.NO_ID, "Ordering Drone " + droneID + " to drop " + waterToDrop + "L at Zone " + incident.getZoneID(), false);
-        // send drop event to drone
-        DropAgentEvent dropEvent = new DropAgentEvent(waterToDrop);
-
-        sendToDrone(dropEvent,droneID);
-
-        startWatchdog(droneID, waterToDrop * 1000);
+            startWatchdog(droneID, waterToDrop * 1000);
+        }
     }
 
     /**
@@ -348,18 +351,18 @@ public class Scheduler {
      */
     public void handleDroneUpdate(DroneUpdateEvent event) {
         int droneID = event.getDroneID();
+        DroneInfo drone = event.getDroneInfo();
 
         // If the drone ID is -1, it's a new drone requesting registration
         if (droneID == -1) {
-            droneID = nextDroneId.getAndIncrement();
-            event.getDroneInfo().setDroneID(droneID);
-            EventLogger.info(EventLogger.NO_ID, "New drone detected, assigning new drone with ID: " + droneID, false);
-            dronesInfo.put(droneID, event.getDroneInfo());
-            this.sendToDrone(event, droneID);
-            EventLogger.info(EventLogger.NO_ID, "Registered new Drone {" + droneID + ", Address: " + event.getDroneInfo().getPort() + ", Port: " + event.getDroneInfo().getPort() + "}", true);
+            drone.setDroneID(nextDroneId.getAndIncrement());
+            drone.setState(new IdleState());
+            EventLogger.info(EventLogger.NO_ID, "New drone detected, assigning new drone with ID: " + drone.getDroneID(), false);
+            dronesInfo.put(drone.getDroneID(), drone);
+            this.sendToDrone(event, drone.getDroneID());
+            EventLogger.info(EventLogger.NO_ID, "Registered new Drone {" + drone.getDroneID() + ", Address: " + drone.getAddress() + ", Port: " + drone.getPort() + "}", true);
         } else {
             // Store or update the drone info
-            DroneInfo drone = event.getDroneInfo();
             dronesInfo.put(droneID, drone);
 
             // Ensure we don't process a null drone state
@@ -382,6 +385,14 @@ public class Scheduler {
                     case DRONE_STUCK_IN_FLIGHT -> handleTransientDroneFailure(droneID, true);
                 }
             }
+        }
+
+        // update drone on dashboard
+        DroneSwarmDashboard.DroneState guiState = DroneSwarmDashboard.DroneState.fromDroneStateObject(drone.getState());
+
+        if (guiState != null) {
+            Point grid = convertToGrid(drone.getCoordinates());
+            dashboard.updateDronePosition(drone.getDroneID(), grid, guiState);
         }
     }
 

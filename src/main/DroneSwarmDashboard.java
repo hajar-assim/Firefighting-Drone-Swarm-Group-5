@@ -2,14 +2,18 @@ package main;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 public class DroneSwarmDashboard extends JFrame {
 
-    public static final int CELL_SIZE = 40;
-    private static final int GRID_WIDTH = 20;
-    private static final int GRID_HEIGHT = 15;
+    public static final int CELL_SIZE = 40; // this is the # divided by the coordinates in the original csv
+    private static final int GRID_WIDTH = 30;
+    private static final int GRID_HEIGHT = 20;
+    private static final int PADDING = 10; // pixels of space around the grid
+    private final BaseStationPanel basePanel = new BaseStationPanel();
 
     // drones
     private final Map<Integer, DroneRender> droneStates = new HashMap<>();
@@ -36,7 +40,7 @@ public class DroneSwarmDashboard extends JFrame {
         CellType(Color c) { this.color = c; }
     }
 
-    // represents drone visual state
+    // represents drone visual state for the GUI
     enum DroneState {
         IDLE(Color.BLUE),
         OUTBOUND(Color.ORANGE),
@@ -45,7 +49,22 @@ public class DroneSwarmDashboard extends JFrame {
         FAULTED(Color.BLACK);
 
         final Color color;
-        DroneState(Color c) { this.color = c; }
+
+        DroneState(Color c) {
+            this.color = c;
+        }
+
+        public static DroneState fromDroneStateObject(subsystems.drone.states.DroneState state) {
+            if (state == null) return null;
+
+            return switch (state.getClass().getSimpleName()) {
+                case "IdleState" -> IDLE;
+                case "OnRouteState" -> OUTBOUND;
+                case "DroppingAgentState" -> EXTINGUISHING;
+                case "FaultedState" -> FAULTED;
+                default -> null;
+            };
+        }
     }
 
     // represents fire status
@@ -63,8 +82,15 @@ public class DroneSwarmDashboard extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
 
-        GridPanel panel = new GridPanel();
-        add(panel, BorderLayout.CENTER);
+        setLayout(new BorderLayout());
+
+        LegendPanel legendPanel = new LegendPanel();
+        GridPanel gridPanel = new GridPanel();
+
+        setLayout(new BorderLayout());
+        add(basePanel, BorderLayout.WEST);
+        add(gridPanel, BorderLayout.CENTER);
+        add(legendPanel, BorderLayout.EAST);
 
         pack();
         setVisible(true);
@@ -81,8 +107,8 @@ public class DroneSwarmDashboard extends JFrame {
             // draw grid
             for (int x = 0; x < GRID_WIDTH; x++) {
                 for (int y = 0; y < GRID_HEIGHT; y++) {
-                    int px = x * CELL_SIZE;
-                    int py = y * CELL_SIZE;
+                    int px = x * CELL_SIZE + PADDING;
+                    int py = y * CELL_SIZE + PADDING;
 
                     Point cell = new Point(x, y);
                     CellType type = zoneMap.getOrDefault(cell, CellType.EMPTY);
@@ -98,11 +124,11 @@ public class DroneSwarmDashboard extends JFrame {
             // grey out the zones
             Graphics2D g2d = (Graphics2D) g;
             g2d.setStroke(new BasicStroke(2)); // 2px wide border
-            g2d.setColor(Color.DARK_GRAY);
+            g2d.setColor(Color.BLACK); // black border
 
             for (Rectangle r : zoneBounds.values()) {
-                int px = r.x * CELL_SIZE;
-                int py = r.y * CELL_SIZE;
+                int px = r.x * CELL_SIZE + PADDING;
+                int py = r.y * CELL_SIZE + PADDING;
                 int width = r.width * CELL_SIZE;
                 int height = r.height * CELL_SIZE;
 
@@ -117,8 +143,8 @@ public class DroneSwarmDashboard extends JFrame {
                 int zoneID = entry.getKey();
                 Point gridPos = entry.getValue(); // top-left cell of zone
 
-                int px = gridPos.x * CELL_SIZE + 4;
-                int py = gridPos.y * CELL_SIZE + 14;
+                int px = gridPos.x * CELL_SIZE + PADDING + 4;
+                int py = gridPos.y * CELL_SIZE + PADDING + 14;
 
                 g.drawString("Z(" + zoneID + ")", px, py);
             }
@@ -127,6 +153,7 @@ public class DroneSwarmDashboard extends JFrame {
             // draw fire indicator
             for (Map.Entry<Integer, Rectangle> entry : zoneBounds.entrySet()) {
                 int zoneID = entry.getKey();
+                if (zoneID == 0) continue; // skip zone 0, our base
                 Rectangle r = entry.getValue();
 
                 FireStatus status = zoneFireStatus.getOrDefault(zoneID, FireStatus.NONE);
@@ -135,11 +162,44 @@ public class DroneSwarmDashboard extends JFrame {
                 int centerX = r.x + r.width / 2;
                 int centerY = r.y + r.height / 2;
 
-                int px = centerX * CELL_SIZE;
-                int py = centerY * CELL_SIZE;
+                int px = centerX * CELL_SIZE + PADDING;
+                int py = centerY * CELL_SIZE + PADDING;
 
                 g.setColor(status == FireStatus.ACTIVE ? Color.RED : Color.GREEN);
                 g.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+            }
+
+            // draw drones
+            for (Map.Entry<Integer, DroneRender> entry : droneStates.entrySet()) {
+                int droneID = entry.getKey();
+                DroneRender drone = entry.getValue();
+
+                int px = drone.gridPos.x * CELL_SIZE + PADDING;
+                int py = drone.gridPos.y * CELL_SIZE + PADDING;
+
+                g.setColor(drone.state.color);
+
+                // don't want to fully cover the cell with drone color, should show up as a dot
+                int size = CELL_SIZE / 5;
+                int offset = (CELL_SIZE - size) / 2;
+
+                g.fillRect(px + offset, py + offset, size, size);
+
+                // draw drone ID label etc: D(1)
+
+                //  exclude Z(0) since we already have a panel for base drones
+                if (entry.getValue().gridPos.x == 0 && entry.getValue().gridPos.y == 0) {
+                    continue;
+                }
+
+                g.setColor(Color.BLACK);
+                g.setFont(new Font("SansSerif", Font.ITALIC, 10));
+
+                // draw the label underneath the drone
+                int labelX = px + offset - 4; // slight nudge to center it
+                int labelY = py + offset + size + 12; // below the square
+                g.drawString("D(" + droneID + ")", labelX, labelY);
+
             }
 
         }
@@ -171,13 +231,18 @@ public class DroneSwarmDashboard extends JFrame {
 
     /**
      * Draws a drone on the grid.
-     * @param droneId
-     * @param newPos
-     * @param newState
      */
-    public void updateDronePosition(int droneId, Point newPos, DroneState newState) {
-        dronePositions.put(droneId, newPos);
-        droneStates.put(droneId, newState);
+    public void updateDronePosition(int droneID, Point gridPos, DroneState state) {
+        droneStates.put(droneID, new DroneRender(gridPos, state));
+
+        // update base station panel with list of drones at base (0,0) and IDLE
+        List<Integer> atBase = droneStates.entrySet().stream()
+                .filter(entry -> entry.getValue().state == DroneState.IDLE)
+                .map(Map.Entry::getKey)
+                .toList();
+
+        basePanel.setDronesAtBase(atBase);
+
         repaint();
     }
 
@@ -187,7 +252,8 @@ public class DroneSwarmDashboard extends JFrame {
      */
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(GRID_WIDTH * CELL_SIZE, GRID_HEIGHT * CELL_SIZE);
+        return new Dimension(GRID_WIDTH * CELL_SIZE + PADDING * 2,
+                GRID_HEIGHT * CELL_SIZE + PADDING * 2);
     }
 
     /**
@@ -213,8 +279,96 @@ public class DroneSwarmDashboard extends JFrame {
         }
     }
 
+    /**
+     * Main method to run the dashboard.
+     * @param args
+     */
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(DroneSwarmDashboard::new);
+    }
+
+
+    /**
+     * Custom JPanel to draw the legend.
+     */
+
+    private static class LegendPanel extends JPanel {
+        public LegendPanel() {
+            setPreferredSize(new Dimension(230, 300)); // width, height
+            setBackground(Color.WHITE);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            int y = 20;
+
+            g.setFont(new Font("SansSerif", Font.BOLD, 14));
+
+            // title
+            g.setColor(Color.BLACK);
+            g.drawString("Legend", 10, y);
+            y += 30;
+
+            drawLegendItem(g, CellType.ZONE.color, "Z(n) Zone Label", y);
+            y += 25;
+
+            drawLegendItem(g, CellType.ACTIVE_FIRE.color, "Active fire", y);
+            y += 25;
+
+            drawLegendItem(g, CellType.EXTINGUISHED_FIRE.color, "Extinguished fire", y);
+            y += 25;
+
+            drawLegendItem(g, DroneState.IDLE.color, "D(n) Drone IDLE", y);
+            y += 25;
+
+            drawLegendItem(g, DroneState.OUTBOUND.color, "D(n) Drone ON_ROUTE", y);
+            y += 25;
+
+            drawLegendItem(g, DroneState.EXTINGUISHING.color, "D(n) Drone DROPPING_AGENT", y);
+        }
+
+        private void drawLegendItem(Graphics g, Color color, String label, int y) {
+            g.setColor(color);
+            g.fillRect(10, y, 20, 20);
+
+            g.setColor(Color.BLACK);
+            g.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            g.drawString(label, 40, y + 15);
+        }
+    }
+
+    private static class BaseStationPanel extends JPanel {
+        private List<Integer> dronesAtBase = new ArrayList<>();
+
+        public void setDronesAtBase(List<Integer> droneIDs) {
+            this.dronesAtBase = droneIDs;
+            repaint();
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            return new Dimension(150, 300);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            g.setFont(new Font("SansSerif", Font.BOLD, 14));
+            g.setColor(Color.BLACK);
+            g.drawString("Base Drones", 10, 20);
+
+            int y = 50;
+            for (int id : dronesAtBase) {
+                g.setColor(DroneState.IDLE.color);
+                g.fillRect(10, y, 20, 20);
+
+                g.setColor(Color.BLACK);
+                g.drawString("D(" + id + ")", 40, y + 15);
+                y += 30;
+            }
+        }
     }
 
 }
