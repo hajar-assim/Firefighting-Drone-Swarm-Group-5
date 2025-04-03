@@ -2,7 +2,9 @@ package subsystems.drone.states;
 
 import logger.EventLogger;
 import main.Scheduler;
+import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneDispatchEvent;
+import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.Event;
 import subsystems.drone.DroneSubsystem;
@@ -74,8 +76,9 @@ public class OnRouteState implements DroneState {
      */
     @Override
     public void travel(DroneSubsystem drone) {
+        Point2D start = drone.getCoordinates();
         Point2D targetCoords = dispatchEvent.getCoords();
-        double flightTime = DroneSubsystem.timeToZone(drone.getCoordinates(), targetCoords);
+        double flightTime = DroneSubsystem.timeToZone(start, targetCoords);
 
         boolean returningToBase = dispatchEvent.getZoneID() == 0;
         String onRoute = returningToBase ? "Base" : "Zone: " + drone.getZoneID();
@@ -83,24 +86,45 @@ public class OnRouteState implements DroneState {
         EventLogger.info(drone.getDroneID(), String.format("On route to " + onRoute
                 + " | Estimated time: " + String.format("%.2f seconds", flightTime)), false);
 
-        // simulate flight time
-        try {
-            Thread.sleep((long) flightTime * Scheduler.sleepMultiplier);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        // simulate animated flight
+        int steps = 20;
+        long stepDuration = (long) ((flightTime * Scheduler.sleepMultiplier) / steps);
+
+        for (int i = 1; i <= steps; i++) {
+            double t = i / (double) steps;
+            double x = start.getX() + (targetCoords.getX() - start.getX()) * t;
+            double y = start.getY() + (targetCoords.getY() - start.getY()) * t;
+
+            drone.setCoordinates(new Point2D.Double(x, y));
+
+            // notify scheduler (GUI)
+            DroneUpdateEvent updateEvent = new DroneUpdateEvent(drone.getDroneInfo());
+            drone.getSocket().send(updateEvent, drone.getSchedulerAddress(), drone.getSchedulerPort());
+
+            try {
+                Thread.sleep(stepDuration);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            // Inject simulated fault mid-flight
+            if (dispatchEvent.getFault() == Faults.DRONE_STUCK_IN_FLIGHT && i == steps / 2) {
+                EventLogger.warn(drone.getDroneID(), "Simulating " + dispatchEvent.getFault() + " fault mid-flight. Not sending arrival event.");
+                drone.setState(new FaultedState(dispatchEvent.getFault()));
+                drone.setZoneID(0);
+                return;
+            }
         }
 
-        // Check if a fault is to be simulated
-        if(dispatchEvent.getFault() == Faults.DRONE_STUCK_IN_FLIGHT){
-            EventLogger.warn(drone.getDroneID(), "Simulating " + dispatchEvent.getFault().toString() + " fault mid-flight. Not sending arrival event.");
-            drone.setState(new FaultedState(dispatchEvent.getFault()));
-            drone.setZoneID(0);
-            return;
-        } else if (dispatchEvent.getFault() == Faults.NOZZLE_JAMMED) {
+        // Handle nozzle jam before arrival
+        if (dispatchEvent.getFault() == Faults.NOZZLE_JAMMED) {
             drone.getDroneInfo().setNozzleJam(true);
         }
 
+        // final snap to exact coords (just in case)
         drone.setCoordinates(targetCoords);
+        DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(drone.getDroneID(), drone.getZoneID());
+        drone.getSocket().send(arrivedEvent, drone.getSchedulerAddress(), drone.getSchedulerPort());
         EventLogger.info(drone.getDroneID(), "Arrived at " + onRoute, false);
 
         if (returningToBase) {
@@ -135,7 +159,8 @@ public class OnRouteState implements DroneState {
 
         // transition back to IdleState
         IdleState idleState = new IdleState();
-        EventLogger.info(drone.getDroneID(), "Now idle and ready for dispatch.\n", true);
         drone.setState(idleState);
+        EventLogger.info(drone.getDroneID(), "Now idle and ready for dispatch.\n", true);
     }
+
 }

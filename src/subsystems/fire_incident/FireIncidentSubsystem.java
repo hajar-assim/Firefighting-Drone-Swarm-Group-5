@@ -124,6 +124,8 @@ public class FireIncidentSubsystem {
                 String[] parts = line.split(",");
                 int zoneId = Integer.parseInt(parts[0]);
                 ZoneEvent zoneEvent = new ZoneEvent(zoneId, parts[1], parts[2]);
+                EventLogger.info(EventLogger.NO_ID, "New zone detected: {" + zoneEvent + "}", true);
+
                 socket.send(zoneEvent, schedulerAddress, schedulerPort);
             }
         } catch (Exception e) {
