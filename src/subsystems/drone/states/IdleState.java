@@ -26,9 +26,8 @@ public class IdleState implements DroneState {
     public void handleEvent(DroneSubsystem drone, Event event) {
         if (event instanceof DroneDispatchEvent){
             if (((DroneDispatchEvent) event).getZoneID() == 0){
-                drone.shutdown();
-            }
-            else {
+                return;
+            } else {
                 dispatch(drone, (DroneDispatchEvent) event);
             }
         } else if (event instanceof DropAgentEvent) {

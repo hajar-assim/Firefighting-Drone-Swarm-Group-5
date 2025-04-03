@@ -14,6 +14,7 @@ public class IncidentEvent extends Event {
     private int zoneID;
     private int waterFoamAmount;
     private Faults fault;
+    private boolean faultHandled = false;
 
     /**
      * Constructs an IncidentEvent object.
@@ -91,6 +92,15 @@ public class IncidentEvent extends Event {
      */
     public int getZoneID() {
         return this.zoneID;
+    }
+
+    public boolean isFaultHandled() {
+        return faultHandled;
+    }
+
+    public void markFaultHandled() {
+        this.faultHandled = true;
+        this.fault = Faults.NONE;
     }
 
     /**

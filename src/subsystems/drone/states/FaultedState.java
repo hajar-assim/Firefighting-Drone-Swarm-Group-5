@@ -34,8 +34,7 @@ public class FaultedState implements DroneState {
     @Override
     public void handleEvent(DroneSubsystem drone, Event event) {
         if (event instanceof DroneDispatchEvent){
-            if (((DroneDispatchEvent) event).getZoneID() == 0 && UNRECOVERABLE_FAULTS.contains(((DroneDispatchEvent) event).getFault())){
-                // unrecoverable fault, shut down the drone
+            if (UNRECOVERABLE_FAULTS.contains(((DroneDispatchEvent) event).getFault())){
                 drone.shutdown();
             }
             else {
@@ -45,7 +44,7 @@ public class FaultedState implements DroneState {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                EventLogger.info(drone.getDroneID(), "[Drone " + drone.getDroneID() + "] Recovered from fault, returning to base", false);
+                EventLogger.info(drone.getDroneID(), "Recovered from fault: " + ((DroneDispatchEvent) event).getFault() + ", returning to base", false);
                 dispatch(drone, (DroneDispatchEvent) event);
             }
         }

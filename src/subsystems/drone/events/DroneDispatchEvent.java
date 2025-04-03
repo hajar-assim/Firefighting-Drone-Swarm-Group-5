@@ -13,7 +13,7 @@ public class DroneDispatchEvent extends Event {
     private int zoneID;
     private Point2D coords;
     private Faults fault;
-
+    private boolean faultHandled = false;
 
     /**
      * Constructs a DroneDispatchEvent with the specified zone ID and coordinates.
@@ -63,6 +63,13 @@ public class DroneDispatchEvent extends Event {
         return coords;
     }
 
+    public boolean isFaultHandled() {
+        return faultHandled;
+    }
+
+    public void markFaultHandled() {
+        this.faultHandled = true;
+    }
 
     /**
      * Returns a string representation of the event.

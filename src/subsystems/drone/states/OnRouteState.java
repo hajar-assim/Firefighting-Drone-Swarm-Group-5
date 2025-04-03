@@ -58,6 +58,7 @@ public class OnRouteState implements DroneState {
      */
     @Override
     public void dispatch(DroneSubsystem drone, DroneDispatchEvent event) {
+        drone.setZoneID(dispatchEvent.getZoneID());
         OnRouteState onRoute = new OnRouteState(event);
         drone.setState(onRoute);
         drone.getState().travel(drone);
@@ -73,6 +74,7 @@ public class OnRouteState implements DroneState {
      */
     @Override
     public void travel(DroneSubsystem drone) {
+        int TRAVEL_CHECK_FREQUENCY = 3;
         Point2D start = drone.getCoordinates();
         Point2D targetCoords = dispatchEvent.getCoords();
         double flightTime = DroneSubsystem.timeToZone(start, targetCoords);
@@ -94,12 +96,22 @@ public class OnRouteState implements DroneState {
 
             drone.setCoordinates(new Point2D.Double(x, y));
 
-            if (i == steps / 2) {
+            if (i == steps / TRAVEL_CHECK_FREQUENCY) {
                 // check if fire still needs service
                 if (!returningToBase && drone.getWaterLevel() > 0) {
                     EventLogger.info(drone.getDroneID(), "Checking if fire at Zone " + drone.getZoneID() + " still needs water mid-flight...", false);
                     DroneReassignRequestEvent reassignRequest = new DroneReassignRequestEvent(drone.getDroneID());
                     drone.getSocket().send(reassignRequest, drone.getSchedulerAddress(), drone.getSchedulerPort());
+
+                    // TODO: recieve from socket, if fire is inactive then set state to idle and break/return from travel
+                    DroneDispatchEvent droneDispatchEvent = (DroneDispatchEvent) drone.getSocket().receive();
+                    if (droneDispatchEvent.getZoneID() != drone.getZoneID()) {
+                        EventLogger.info(drone.getDroneID(), "Fire at Zone " + drone.getZoneID() + " is inactive. Transitioning to Idle State.", false);
+                        drone.setState(new IdleState());
+                        return;
+                    } else {
+                        EventLogger.info(drone.getDroneID(), "Fire at Zone " + drone.getZoneID() + " is still active. Continuing flight.", false);
+                    }
                 }
             }
 
@@ -123,13 +135,13 @@ public class OnRouteState implements DroneState {
         }
 
         // Handle nozzle jam before arrival
-        if (dispatchEvent.getFault() == Faults.NOZZLE_JAMMED) {
+        if (!dispatchEvent.isFaultHandled() && dispatchEvent.getFault() == Faults.NOZZLE_JAMMED) {
             drone.getDroneInfo().setNozzleJam(true);
-            dispatchEvent.setFault(Faults.NONE);
         }
 
         // final snap to exact coords (just in case)
         drone.setCoordinates(targetCoords);
+
         DroneArrivedEvent arrivedEvent = new DroneArrivedEvent(drone.getDroneID(), drone.getZoneID());
         drone.getSocket().send(arrivedEvent, drone.getSchedulerAddress(), drone.getSchedulerPort());
         EventLogger.info(drone.getDroneID(), "Arrived at " + onRoute, false);

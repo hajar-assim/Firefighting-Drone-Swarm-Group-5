@@ -152,7 +152,7 @@ public class Scheduler {
                     .filter(e -> e.getZoneID() == zoneID)
                     .count();
 
-            if (assigned < 3) { // optional limit
+            if (assigned < 2) { // optional limit max drones per zone
                 Point2D target = fireZones.get(zoneID);
                 if (target != null) return Optional.of(incident);
             }
@@ -262,11 +262,12 @@ public class Scheduler {
             return false;
         }
 
+        DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, task.getFault());
         // track drone assignment
         droneAssignments.put(droneID, task);
 
         // Create a dispatch event that carries the simulation flag and the specific fault
-        DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, task.getFault());
+
         EventLogger.info(EventLogger.NO_ID,
                 String.format("Assigned and dispatching Drone %d → Zone %d | Coords: (%.1f, %.1f) | Fault: %s",
                         droneID,
@@ -333,13 +334,16 @@ public class Scheduler {
      */
     private void handleDroneArrival(DroneArrivedEvent event) {
         int droneID = event.getDroneID();
-        if (droneID == 0) {
+        if (event.getZoneID() == 0) {
             EventLogger.info(EventLogger.NO_ID, "Drone " + droneID + " has returned to base.", false);
             dashboard.updateDronePosition(droneID, new Point(0, 0), DroneSwarmDashboard.DroneState.IDLE);
         } else {
             cancelWatchdog(droneID);
             IncidentEvent incident = droneAssignments.get(droneID);
-
+            if (incident == null) {
+                EventLogger.error(droneID, "Drone " + droneID + " arrived at zone " + event.getZoneID() + " but has no assignment.");
+                return;
+            }
             // check if this zone still requires service by the time the drone arrives
             if (incident.getWaterFoamAmount() <= 0) {
                 EventLogger.info(droneID, "Arrived at Zone " + incident.getZoneID() + " but the fire is already extinguished.", false);
@@ -381,16 +385,19 @@ public class Scheduler {
 
         // If required water vol has been used then remove the incident from the incident list and unassign drone from zone id
         if (remainingWater <= 0) {
-            reassignDrone(dronesInfo.get(droneID));
             // notify FireIncidentSubSystem that the fire has been put out
             IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
             EventLogger.info(EventLogger.NO_ID, "Fire at Zone " + incident.getZoneID() + " has been extinguished.", true);
             dashboard.setZoneFireStatus(incident.getZoneID(), DroneSwarmDashboard.FireStatus.EXTINGUISHED);
             sendSocket.send(fireOutEvent, fireSubsystemAddress, fireSubsystemPort);
+            activeFires.remove(incident.getZoneID());
+            incident.setWaterFoamAmount(0);
+
+            reassignDrone(dronesInfo.get(droneID));
         } else {
-            // otherwise update remaining water
             incident.setWaterFoamAmount(remainingWater);
             droneAssignments.remove(droneID);
+            activeFires.get(incident.getZoneID()).setWaterFoamAmount(remainingWater);
             EventLogger.warn(EventLogger.NO_ID, "Fire at Zone " + incident.getZoneID() + " still needs " + remainingWater + "L of water to extinguish.");
         }
 
@@ -416,9 +423,6 @@ public class Scheduler {
             this.sendToDrone(event, drone.getDroneID());
             EventLogger.info(EventLogger.NO_ID, "Registered new Drone {" + drone.getDroneID() + ", Address: " + drone.getAddress() + ", Port: " + drone.getPort() + "}", true);
         } else {
-            // Store or update the drone info
-            dronesInfo.put(droneID, drone);
-
             // Ensure we don't process a null drone state
             if (drone.getState() == null) {
                 EventLogger.warn(EventLogger.NO_ID, "Drone " + droneID + " has no valid state.");
@@ -426,11 +430,16 @@ public class Scheduler {
             }
 
             // Log drone update
-            if (drone.getState() instanceof FaultedState) {
-                EventLogger.warn(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName());
-            } else {
-                EventLogger.info(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName(), false);
+            if (dronesInfo.get(droneID).getState().getClass() != drone.getState().getClass()) {
+                if (drone.getState() instanceof FaultedState) {
+                    EventLogger.warn(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName());
+                } else {
+                    EventLogger.info(EventLogger.NO_ID, "Received update: Drone " + droneID + " is now in state " + drone.getState().getClass().getSimpleName(), false);
+                }
             }
+
+            // Store or update the drone info
+            dronesInfo.put(droneID, drone);
 
             // Check for faulted state
             if (drone.getState() instanceof FaultedState state) {
@@ -456,10 +465,21 @@ public class Scheduler {
      */
     private void handleReassignDrone(DroneReassignRequestEvent event) {
         DroneInfo drone = dronesInfo.get(event.getDroneID());
-        if (droneAssignments.get(drone.getDroneID()).getWaterFoamAmount() <= 0) {
+        IncidentEvent incident = droneAssignments.get(event.getDroneID());
+        if (incident == null) {
+            EventLogger.error(EventLogger.NO_ID, "Drone " + event.getDroneID() + " has no assignment.");
+            return;
+        }
+
+        int zoneID = incident.getZoneID();
+        IncidentEvent activeFire = activeFires.get(zoneID);
+
+        if (activeFire == null) {
             reassignDrone(drone);
         } else {
             EventLogger.info(drone.getDroneID(), "Zone " + droneAssignments.get(drone.getDroneID()).getZoneID() + " still needs water. Continue en route.", false);
+            DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(drone.getZoneID(), drone.getCoordinates(), droneAssignments.get(event.getDroneID()).getFault());
+            this.sendToDrone(dispatchEvent, event.getDroneID());
         }
     }
 
@@ -471,14 +491,16 @@ public class Scheduler {
     private void handleNozzleJammedDrone(int droneID) {
         EventLogger.warn(EventLogger.NO_ID, "Drone " + droneID + " in faulted state, reported NOZZLE_JAMMED. Shutting Down Drone.");
         cancelWatchdog(droneID);
-        // Decouple the incident and drone
+
+        // remove broken drone from assignments
         IncidentEvent incident = droneAssignments.remove(droneID);
 
         if (incident == null) {
             return;
         }
 
-        EventLogger.info(EventLogger.NO_ID, "Re-queuing Incident at Zone " + incident.getZoneID() + " for reassignment.", false);
+        int zoneID = incident.getZoneID();
+        activeFires.get(zoneID).markFaultHandled();
 
         DroneDispatchEvent shutDownEvent = new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NOZZLE_JAMMED);
         sendToDrone(shutDownEvent, droneID);
@@ -496,7 +518,7 @@ public class Scheduler {
         IncidentEvent incidentEvent = droneAssignments.remove(droneID);
 
         EventLogger.info(EventLogger.NO_ID, "Re‑queuing Incident " + incidentEvent.toString() + " for reassignment.", true);
-        incidentEvent.setFault(Faults.NONE);
+        incidentEvent.markFaultHandled();
 
         if (dispatchToBase){
             DroneDispatchEvent returnToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE);
@@ -513,7 +535,7 @@ public class Scheduler {
                 IncidentEvent incident = this.droneAssignments.get(droneID);
 
                 EventLogger.warn(EventLogger.NO_ID, "Packet Loss occurred during handling of Incident: " + incident.toString());
-                incident.setFault(Faults.NONE);
+                incident.markFaultHandled();
                 this.handleTransientDroneFailure(droneID, false);
             } catch (InterruptedException ignored) {
             } finally {
@@ -591,6 +613,7 @@ public class Scheduler {
         } else {
             // no zone needs help — stay idle
             EventLogger.info(droneID, "No active fires nearby. Idling...", false);
+            drone.setZoneID(0);
             drone.setState(new IdleState());
             droneAssignments.remove(droneID);
         }
