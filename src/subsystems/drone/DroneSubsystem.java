@@ -7,6 +7,7 @@ import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.states.DroneState;
+import subsystems.drone.states.IdleState;
 
 import java.awt.geom.Point2D;
 import java.net.InetAddress;
@@ -110,6 +111,21 @@ public class DroneSubsystem {
      * @param newState The new state to transition to.
      */
     public void setState(DroneState newState){
+        // If the current state is IdleState and we're leaving it, update idle time.
+        if (info.getState() instanceof IdleState && !(newState instanceof IdleState)) {
+            if (info.getIdleStartTime() > 0) {
+                long idleDuration = System.currentTimeMillis() - info.getIdleStartTime();
+                info.setTotalIdleTime(info.getTotalIdleTime() + idleDuration);
+                info.setIdleStartTime(0);
+            }
+        }
+
+        // If transitioning into IdleState, record the start time if not already set.
+        if (newState instanceof IdleState && info.getIdleStartTime() == 0) {
+            info.setIdleStartTime(System.currentTimeMillis());
+        }
+
+
         info.setState(newState);
         DroneUpdateEvent droneUpdateEvent = new DroneUpdateEvent(info);
         socket.send(droneUpdateEvent, getSchedulerAddress(), getSchedulerPort());

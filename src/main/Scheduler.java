@@ -9,6 +9,7 @@ import subsystems.drone.DroneSubsystem;
 import subsystems.drone.events.*;
 import subsystems.drone.states.*;
 import subsystems.fire_incident.Faults;
+import subsystems.fire_incident.FireIncidentSubsystem;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
@@ -38,6 +39,10 @@ public class Scheduler {
     private Set<Integer> dronesReturningToBase = new HashSet<>();
     private boolean shutdownPending = false;
     private final Map<Integer, IncidentEvent> activeFires = new HashMap<>();
+    private final Map<IncidentEvent, Long> incidentStartTimes = new HashMap<>();
+    private long totalExtinguishTime = 0;
+    private int incidentsCompleted = 0;
+    private final Map<Integer, Double> zoneResponseTimes = new HashMap<>();
 
 
     /**
@@ -95,6 +100,37 @@ public class Scheduler {
                 EventLogger.error(EventLogger.NO_ID, "Issue handling message: " + e.getMessage());
                 e.printStackTrace();
             }
+        }
+
+        // Log overall performance metrics
+        EventLogger.info(EventLogger.NO_ID, "\n========== PERFORMANCE METRICS ==========", true);
+
+        double totalExtinguishTimeSec = totalExtinguishTime/1000.0;
+        EventLogger.info(EventLogger.NO_ID, "[METRICS] Total Extinguish Time: " + totalExtinguishTimeSec + " s", true);
+
+        if (incidentsCompleted > 0) {
+            long averageExtinguishTime = totalExtinguishTime / incidentsCompleted;
+            double averageExtinguishTimeSec = averageExtinguishTime/1000.0;
+            EventLogger.info(EventLogger.NO_ID, "[METRICS] Average Extinguish Time: " + averageExtinguishTimeSec + " s", true);
+        }
+
+        // Calc total idle time for each drone
+        for (DroneInfo drone : dronesInfo.values()) {
+
+            // Finalize drones idle time
+            if (drone.getState() instanceof IdleState && drone.getIdleStartTime() != 0) {
+                long idleDuration = System.currentTimeMillis() - drone.getIdleStartTime();
+                drone.setTotalIdleTime(drone.getTotalIdleTime() + idleDuration);
+                drone.setIdleStartTime(0);
+            }
+            double totalIdleTimeSec = drone.getTotalIdleTime()/1000.0;
+            EventLogger.info(EventLogger.NO_ID, "Drone " + drone.getDroneID() + " total idle time: " + totalIdleTimeSec + " s", true);
+        }
+
+        // Print zone response times at the end of simulation
+        EventLogger.info(EventLogger.NO_ID, "\n========== ZONE RESPONSE TIMES ==========", true);
+        for (Map.Entry<Integer, Double> entry : zoneResponseTimes.entrySet()) {
+            EventLogger.info(EventLogger.NO_ID, "Zone " + entry.getKey() + " response time: " + entry.getValue() + " s", true);
         }
 
         this.receiveSocket.getSocket().close();
@@ -189,6 +225,12 @@ public class Scheduler {
     private void storeZoneData(ZoneEvent event) {
         fireZones.put(event.getZoneID(), event.getCenter());
 
+        // Calculate the one way distance from the base to the zone center, logs distance only if zone id is not id of base
+        if (event.getZoneID() != 0) {
+            int distance = (int) Math.round(FireIncidentSubsystem.BASE_COORDINATES.distance(event.getCenter()));
+            EventLogger.info(EventLogger.NO_ID, "[METRICS] Distance to reach Zone " + event.getZoneID() + " from base: " + distance + " meters", true);
+        }
+
         // update the dashboard with the new zone data
         Point start = convertToGrid(event.getStart());
         Point end = convertToGrid(event.getEnd());
@@ -231,6 +273,13 @@ public class Scheduler {
             return;
         }
 
+        // If this zone hasn't been recorded yet record its start time
+        if (!zoneResponseTimes.containsKey(event.getZoneID())) {
+            incidentStartTimes.put(event, System.currentTimeMillis());
+        }
+
+        // Record the start time for this incident
+        incidentStartTimes.put(event, System.currentTimeMillis());
         EventLogger.info(EventLogger.NO_ID,"New fire incident at Zone " + event.getZoneID() + ". Requires " + event.getWaterFoamAmount() + "L of water.", true);
         activeFires.put(event.getZoneID(), event);
         dashboard.updateZoneWater(event.getZoneID(), event.getWaterFoamAmount());
@@ -261,12 +310,13 @@ public class Scheduler {
         if (droneID == -1) {
             return false;
         }
-
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, task.getFault());
         // track drone assignment
         droneAssignments.put(droneID, task);
 
-        // Create a dispatch event that carries the simulation flag and the specific fault
+        // Calc distance travelled from base to fire zone to base
+        double distanceToZone = FireIncidentSubsystem.BASE_COORDINATES.distance(fireZoneCenter);
+        double distanceBack = fireZoneCenter.distance(new Point2D.Double(0, 0));
 
         EventLogger.info(EventLogger.NO_ID,
                 String.format("Assigned and dispatching Drone %d → Zone %d | Coords: (%.1f, %.1f) | Fault: %s",
@@ -344,6 +394,18 @@ public class Scheduler {
                 EventLogger.error(droneID, "Drone " + droneID + " arrived at zone " + event.getZoneID() + " but has no assignment.");
                 return;
             }
+
+            // Record zone response time if not already recorded
+            if (!zoneResponseTimes.containsKey(incident.getZoneID())) {
+                Long startTime = incidentStartTimes.get(incident);
+                if (startTime != null) {
+                    long responseTime = System.currentTimeMillis() - startTime;
+                    // Convert to seconds
+                    double responseTimeSec = responseTime / 1000.0;
+                    zoneResponseTimes.put(incident.getZoneID(), responseTimeSec);
+                }
+            }
+
             // check if this zone still requires service by the time the drone arrives
             if (incident.getWaterFoamAmount() <= 0) {
                 EventLogger.info(droneID, "Arrived at Zone " + incident.getZoneID() + " but the fire is already extinguished.", false);
@@ -385,6 +447,20 @@ public class Scheduler {
 
         // If required water vol has been used then remove the incident from the incident list and unassign drone from zone id
         if (remainingWater <= 0) {
+            droneAssignments.remove(droneID);
+
+            // Calc time to extinguish
+            Long startTime = incidentStartTimes.get(incident);
+            if (startTime != null) {
+                long extinguishTime = System.currentTimeMillis() - startTime;
+                double extinguishTimeSec = extinguishTime / 1000.0;
+                EventLogger.info(EventLogger.NO_ID, "[METRICS] Fire extinguish time for Zone " + incident.getZoneID() + ": " + extinguishTimeSec + " s", true);
+
+                // Accumulate totals for average calculation
+                totalExtinguishTime += extinguishTime;
+                incidentsCompleted++;
+            }
+
             // notify FireIncidentSubSystem that the fire has been put out
             IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
             EventLogger.info(EventLogger.NO_ID, "Fire at Zone " + incident.getZoneID() + " has been extinguished.", true);
