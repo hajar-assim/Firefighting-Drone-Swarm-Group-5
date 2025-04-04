@@ -1,7 +1,8 @@
 package main;
 
-import helpers.IncidentEventComparator;
 import logger.EventLogger;
+import main.ui.DroneStateEnum;
+import main.ui.DroneSwarmDashboard;
 import subsystems.Event;
 import subsystems.EventType;
 import subsystems.drone.DroneInfo;
@@ -21,6 +22,8 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static main.ui.GridPanel.CELL_SIZE;
 
 public class Scheduler {
     private static final AtomicInteger nextDroneId = new AtomicInteger(1);
@@ -336,7 +339,7 @@ public class Scheduler {
         int droneID = event.getDroneID();
         if (event.getZoneID() == 0) {
             EventLogger.info(EventLogger.NO_ID, "Drone " + droneID + " has returned to base.", false);
-            dashboard.updateDronePosition(droneID, new Point(0, 0), DroneSwarmDashboard.DroneState.IDLE);
+            dashboard.updateDronePosition(droneID, new Point(0, 0), DroneStateEnum.IDLE);
         } else {
             cancelWatchdog(droneID);
             IncidentEvent incident = droneAssignments.get(droneID);
@@ -451,7 +454,7 @@ public class Scheduler {
         }
 
         // update drone on dashboard
-        DroneSwarmDashboard.DroneState guiState = DroneSwarmDashboard.DroneState.fromDroneStateObject(drone.getState());
+        DroneStateEnum guiState = DroneStateEnum.fromDroneStateObject(drone.getState());
 
         if (guiState != null) {
             Point grid = convertToGrid(drone.getCoordinates());
@@ -565,8 +568,8 @@ public class Scheduler {
      * @return The grid coordinates as a Point object.
      */
     private Point convertToGrid(Point2D realWorldPoint) {
-        int gridX = (int) Math.round((realWorldPoint.getX() / DroneSwarmDashboard.CELL_SIZE));
-        int gridY = (int) Math.round((realWorldPoint.getY() / DroneSwarmDashboard.CELL_SIZE));
+        int gridX = (int) Math.round((realWorldPoint.getX() / CELL_SIZE));
+        int gridY = (int) Math.round((realWorldPoint.getY() / CELL_SIZE));
         return new Point(gridX, gridY);
     }
 
