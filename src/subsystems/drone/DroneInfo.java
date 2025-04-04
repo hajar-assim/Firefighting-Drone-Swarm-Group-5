@@ -20,6 +20,8 @@ public class DroneInfo implements Serializable {
     private InetAddress address;
     private Integer port;
     private boolean nozzleJam;
+    private long totalIdleTime = 0;
+    private long idleStartTime = 0;
 
 
     /**
@@ -190,4 +192,21 @@ public class DroneInfo implements Serializable {
     public boolean getNozzleJam(){
         return this.nozzleJam;
     }
+
+    public long getIdleStartTime() {
+        return idleStartTime;
+    }
+
+    public void setIdleStartTime(long idleStartTime) {
+        this.idleStartTime = idleStartTime;
+    }
+
+    public long getTotalIdleTime() {
+        return totalIdleTime;
+    }
+
+    public void setTotalIdleTime(long totalIdleTime) {
+        this.totalIdleTime = totalIdleTime;
+    }
+
 }
