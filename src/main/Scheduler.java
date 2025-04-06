@@ -310,13 +310,12 @@ public class Scheduler {
         if (droneID == -1) {
             return false;
         }
+
         DroneDispatchEvent dispatchEvent = new DroneDispatchEvent(zoneID, fireZoneCenter, task.getFault());
         // track drone assignment
         droneAssignments.put(droneID, task);
 
-        // Calc distance travelled from base to fire zone to base
-        double distanceToZone = FireIncidentSubsystem.BASE_COORDINATES.distance(fireZoneCenter);
-        double distanceBack = fireZoneCenter.distance(new Point2D.Double(0, 0));
+        // Create a dispatch event that carries the simulation flag and the specific fault
 
         EventLogger.info(EventLogger.NO_ID,
                 String.format("Assigned and dispatching Drone %d → Zone %d | Coords: (%.1f, %.1f) | Fault: %s",
