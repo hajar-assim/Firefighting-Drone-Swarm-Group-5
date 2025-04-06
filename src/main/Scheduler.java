@@ -117,6 +117,12 @@ public class Scheduler {
 
             Optional<IncidentEvent> next = findNextFireNeedingHelp(drone);
             next.ifPresent(incident -> assignDroneToIncident(incident, drone));
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -232,6 +238,9 @@ public class Scheduler {
         }
 
         EventLogger.info(EventLogger.NO_ID,"New fire incident at Zone " + event.getZoneID() + ". Requires " + event.getWaterFoamAmount() + "L of water.", true);
+
+        assignAvailableDrones();
+
         activeFires.put(event.getZoneID(), event);
         dashboard.updateZoneWater(event.getZoneID(), event.getWaterFoamAmount());
         dashboard.setZoneFireStatus(event.getZoneID(), DroneSwarmDashboard.FireStatus.ACTIVE);

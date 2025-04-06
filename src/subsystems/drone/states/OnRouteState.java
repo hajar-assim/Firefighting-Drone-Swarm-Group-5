@@ -30,9 +30,7 @@ public class OnRouteState implements DroneState {
     @Override
     public void handleEvent(DroneSubsystem drone, Event event) {
         if (event instanceof DroneDispatchEvent redirectEvent) {
-            String zone = redirectEvent.getZoneID() != 0 ? "new Zone: " + redirectEvent.getZoneID() : " Base";
-            EventLogger.info(drone.getDroneID(), "Redirecting to " + zone, false);
-            dispatch(drone, (DroneDispatchEvent) event);
+
         } else if (event instanceof DropAgentEvent dropAgentEvent) {
             EventLogger.info(drone.getDroneID(), "Received order to drop " + dropAgentEvent.getVolume() + "L of water.", false);
             drone.setState(new DroppingAgentState());
@@ -108,7 +106,7 @@ public class OnRouteState implements DroneState {
                 Event event = drone.getSocket().receive();
                 if (event instanceof DroneDispatchEvent droneDispatch && droneDispatch.getZoneID() != drone.getZoneID()) {
                     EventLogger.info(drone.getDroneID(), "Fire at Zone " + drone.getZoneID() + " is inactive.", false);
-                    String zone = droneDispatch.getZoneID() != 0 ? "new Zone: " + droneDispatch.getZoneID() : " Base";
+                    String zone = droneDispatch.getZoneID() != 0 ? "new Zone: " + droneDispatch.getZoneID() : "Base";
                     EventLogger.info(drone.getDroneID(), "Redirecting to " + zone, false);
                     dispatch(drone, (DroneDispatchEvent) event);
                     return;
