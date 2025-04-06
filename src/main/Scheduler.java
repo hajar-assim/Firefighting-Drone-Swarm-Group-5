@@ -159,7 +159,7 @@ public class Scheduler {
                     .filter(e -> e.getZoneID() == zoneID)
                     .count();
 
-            if (assigned < 2) { // optional limit max drones per zone
+            if (assigned < 2 && incident.getWaterFoamAmount() > 15) { // optional limit max drones per zone
                 if (fireZones.get(zoneID) != null && hasEnoughBattery(drone, fireZones.get(zoneID))) return Optional.of(incident);
             }
         }
@@ -282,7 +282,7 @@ public class Scheduler {
                 return;
             }
             // check if this zone still requires service by the time the drone arrives
-            if (incident.getWaterFoamAmount() <= 0) {
+            if (! activeFires.containsKey(incident.getZoneID())) {
                 EventLogger.info(droneID, "Arrived at Zone " + incident.getZoneID() + " but the fire is already extinguished.", false);
                 reassignDrone(dronesInfo.get(droneID));
             } else {
