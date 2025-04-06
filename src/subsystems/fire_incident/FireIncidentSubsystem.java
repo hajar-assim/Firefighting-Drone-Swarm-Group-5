@@ -12,6 +12,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
+import java.time.LocalTime;
 import java.util.HashSet;
 
 /**
@@ -21,6 +23,7 @@ import java.util.HashSet;
  */
 public class FireIncidentSubsystem {
     public static Point2D BASE_COORDINATES = new Point2D.Double(0,0);
+    private static final int SLEEP_DIVIDER = 2;  // Speed up sleep time between events
     private final String INPUT_FOLDER;
     private File eventFile;
     private File zoneFile;
@@ -28,6 +31,7 @@ public class FireIncidentSubsystem {
     private InetAddress schedulerAddress;
     private int schedulerPort;
     private HashSet<Integer> activeFires = new HashSet<>();
+    private LocalTime startTime;
 
     /**
      * Constructs a FireIncidentSubsystem.
@@ -42,6 +46,7 @@ public class FireIncidentSubsystem {
         this.schedulerPort = schedulerPort;
         this.INPUT_FOLDER = inputFolderPath;
         this.getInputFiles();
+        this.startTime = null;
     }
 
     /**
@@ -94,6 +99,15 @@ public class FireIncidentSubsystem {
                 } catch (IllegalArgumentException e) {
                     EventLogger.error(EventLogger.NO_ID, "Invalid fault type '" + parts[4] + "', defaulting to fault type NONE.");
                     fault = Faults.NONE;
+                }
+
+                if (startTime == null){
+                    startTime = LocalTime.parse(timestamp);
+                }else{
+                    Duration durationUntilNextEvent = Duration.between(startTime, LocalTime.parse(timestamp));
+                    startTime = LocalTime.parse(timestamp);
+                    EventLogger.info(EventLogger.NO_ID, "Sleeping for " + durationUntilNextEvent.getSeconds() + " seconds until next event", true);
+                    Thread.sleep(durationUntilNextEvent.toMillis() / SLEEP_DIVIDER);
                 }
 
                 // Create IncidentEvent with injected fault
@@ -157,6 +171,10 @@ public class FireIncidentSubsystem {
         while (!activeFires.isEmpty()) {
             IncidentEvent event = (IncidentEvent) socket.receive();
             EventLogger.info(EventLogger.NO_ID, "Received event: " + event, false);
+            if (event == null) {
+                EventLogger.error(EventLogger.NO_ID, "Received null event.");
+                continue;
+            }
 
             if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                 removeFire(event.getZoneID());
@@ -183,7 +201,6 @@ public class FireIncidentSubsystem {
         socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 
         socket.getSocket().close();
-
     }
 
     public static void main(String[] args) {

@@ -11,7 +11,7 @@ import java.util.ArrayList;
 
 public class FaultedState implements DroneState {
     private final Faults faultDescription;
-    private static final int RECOVERY_TIME = 10000;
+    private static final int RECOVERY_TIME = 20000;
     public static final ArrayList<Faults> UNRECOVERABLE_FAULTS = new ArrayList<>() {{
         add(Faults.NOZZLE_JAMMED);
     }};
@@ -44,7 +44,7 @@ public class FaultedState implements DroneState {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                EventLogger.info(drone.getDroneID(), "Recovered from fault: " + ((DroneDispatchEvent) event).getFault() + ", returning to base", false);
+                EventLogger.info(drone.getDroneID(), "Recovered from fault: " + faultDescription + ", returning to base", false);
                 dispatch(drone, (DroneDispatchEvent) event);
             }
         }

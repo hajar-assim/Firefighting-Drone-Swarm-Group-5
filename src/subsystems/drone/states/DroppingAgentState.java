@@ -28,8 +28,9 @@ public class DroppingAgentState implements DroneState {
     public void handleEvent(DroneSubsystem drone, Event event) {
         if (event instanceof DropAgentEvent) {
             dropAgent(drone, (DropAgentEvent) event);
-        } else if (event instanceof DroneDispatchEvent) {
-            EventLogger.info(drone.getDroneID(), "Redirecting to a new target zone.", false);
+        } else if (event instanceof DroneDispatchEvent dispatchEvent) {
+            String zone = dispatchEvent.getZoneID() != 0 ? "new Zone: " + dispatchEvent.getZoneID() : "Base";
+            EventLogger.info(drone.getDroneID(), "Redirecting to " + zone, false);
             dispatch(drone, (DroneDispatchEvent) event);
         }
     }

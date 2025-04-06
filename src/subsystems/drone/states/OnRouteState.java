@@ -17,6 +17,7 @@ import java.awt.geom.Point2D;
 
 public class OnRouteState implements DroneState {
     private DroneDispatchEvent dispatchEvent;
+    private final int TRAVEL_CHECK_FREQ = 3;
 
     /**
      * Handles events while the drone is in the OnRouteState.
@@ -28,9 +29,8 @@ public class OnRouteState implements DroneState {
      */
     @Override
     public void handleEvent(DroneSubsystem drone, Event event) {
-        if (event instanceof DroneDispatchEvent) {
-            EventLogger.info(drone.getDroneID(), "Redirecting to a new target zone.", false);
-            dispatch(drone, (DroneDispatchEvent) event);
+        if (event instanceof DroneDispatchEvent redirectEvent) {
+
         } else if (event instanceof DropAgentEvent dropAgentEvent) {
             EventLogger.info(drone.getDroneID(), "Received order to drop " + dropAgentEvent.getVolume() + "L of water.", false);
             drone.setState(new DroppingAgentState());
@@ -74,7 +74,6 @@ public class OnRouteState implements DroneState {
      */
     @Override
     public void travel(DroneSubsystem drone) {
-        int TRAVEL_CHECK_FREQUENCY = 3;
         Point2D start = drone.getCoordinates();
         Point2D targetCoords = dispatchEvent.getCoords();
         double flightTime = DroneSubsystem.timeToZone(start, targetCoords);
@@ -87,6 +86,7 @@ public class OnRouteState implements DroneState {
 
         // simulate animated flight
         int steps = 20;
+        int triggerInterval = steps / TRAVEL_CHECK_FREQ;
         long stepDuration = (long) ((flightTime * Scheduler.sleepMultiplier) / steps);
 
         for (int i = 1; i <= steps; i++) {
@@ -96,22 +96,22 @@ public class OnRouteState implements DroneState {
 
             drone.setCoordinates(new Point2D.Double(x, y));
 
-            if (i == steps / TRAVEL_CHECK_FREQUENCY) {
+            if (i % triggerInterval == 0 && !returningToBase && drone.getWaterLevel() > 0) {
                 // check if fire still needs service
-                if (!returningToBase && drone.getWaterLevel() > 0) {
-                    EventLogger.info(drone.getDroneID(), "Checking if fire at Zone " + drone.getZoneID() + " still needs water mid-flight...", false);
-                    DroneReassignRequestEvent reassignRequest = new DroneReassignRequestEvent(drone.getDroneID());
-                    drone.getSocket().send(reassignRequest, drone.getSchedulerAddress(), drone.getSchedulerPort());
+                EventLogger.info(drone.getDroneID(), "Checking if fire at Zone " + drone.getZoneID() + " still needs water mid-flight...", false);
+                DroneReassignRequestEvent reassignRequest = new DroneReassignRequestEvent(drone.getDroneID());
+                drone.getSocket().send(reassignRequest, drone.getSchedulerAddress(), drone.getSchedulerPort());
 
-                    // TODO: recieve from socket, if fire is inactive then set state to idle and break/return from travel
-                    DroneDispatchEvent droneDispatchEvent = (DroneDispatchEvent) drone.getSocket().receive();
-                    if (droneDispatchEvent.getZoneID() != drone.getZoneID()) {
-                        EventLogger.info(drone.getDroneID(), "Fire at Zone " + drone.getZoneID() + " is inactive. Transitioning to Idle State.", false);
-                        drone.setState(new IdleState());
-                        return;
-                    } else {
-                        EventLogger.info(drone.getDroneID(), "Fire at Zone " + drone.getZoneID() + " is still active. Continuing flight.", false);
-                    }
+                //recieve from socket, if fire is inactive then set state to idle and break/return from travel
+                Event event = drone.getSocket().receive();
+                if (event instanceof DroneDispatchEvent droneDispatch && droneDispatch.getZoneID() != drone.getZoneID()) {
+                    EventLogger.info(drone.getDroneID(), "Fire at Zone " + drone.getZoneID() + " is inactive.", false);
+                    String zone = droneDispatch.getZoneID() != 0 ? "new Zone: " + droneDispatch.getZoneID() : "Base";
+                    EventLogger.info(drone.getDroneID(), "Redirecting to " + zone, false);
+                    dispatch(drone, (DroneDispatchEvent) event);
+                    return;
+                } else {
+                    EventLogger.info(drone.getDroneID(), "Fire at Zone " + drone.getZoneID() + " is still active. Continuing flight.", false);
                 }
             }
 
