@@ -46,6 +46,7 @@ public class Scheduler {
     private long totalExtinguishTime = 0;
     private int incidentsCompleted = 0;
     private final Map<Integer, Double> zoneResponseTimes = new HashMap<>();
+    private final Map<Integer, Double> zoneExtinguishTimes = new HashMap<>();
 
 
     /**
@@ -105,9 +106,23 @@ public class Scheduler {
             }
         }
 
+
+        EventLogger.info(EventLogger.NO_ID, "\n========== DISTANCES FROM BASE TO ZONES ==========", true);
+        for (Map.Entry<Integer, Point2D> entry : fireZones.entrySet()) {
+            int zoneID = entry.getKey();
+            if (zoneID == 0) continue;
+            int distance = (int) Math.round(FireIncidentSubsystem.BASE_COORDINATES.distance(entry.getValue()));
+            EventLogger.info(EventLogger.NO_ID, "Distance from base to Zone " + zoneID + ": " + distance + " meters", true);
+        }
+
+        // Print zone extinguish times at the end of simulation
+        EventLogger.info(EventLogger.NO_ID, "\n========== ZONE EXTINGUISH TIMES ==========", true);
+        for (Map.Entry<Integer, Double> entry : zoneExtinguishTimes.entrySet()) {
+            EventLogger.info(EventLogger.NO_ID, "Fire extinguish time for Zone " + entry.getKey() + ": " + entry.getValue() + " s", true);
+        }
+
         // Log overall performance metrics
         EventLogger.info(EventLogger.NO_ID, "\n========== PERFORMANCE METRICS ==========", true);
-
         double totalExtinguishTimeSec = totalExtinguishTime/1000.0;
         EventLogger.info(EventLogger.NO_ID, "[METRICS] Total Extinguish Time: " + totalExtinguishTimeSec + " s", true);
 
@@ -231,12 +246,6 @@ public class Scheduler {
      */
     private void storeZoneData(ZoneEvent event) {
         fireZones.put(event.getZoneID(), event.getCenter());
-
-        // Calculate the one way distance from the base to the zone center, logs distance only if zone id is not id of base
-        if (event.getZoneID() != 0) {
-            int distance = (int) Math.round(FireIncidentSubsystem.BASE_COORDINATES.distance(event.getCenter()));
-            EventLogger.info(EventLogger.NO_ID, "[METRICS] Distance to reach Zone " + event.getZoneID() + " from base: " + distance + " meters", true);
-        }
 
         // update the dashboard with the new zone data
         Point start = convertToGrid(event.getStart());
@@ -395,14 +404,19 @@ public class Scheduler {
             // Calc time to extinguish
             Long startTime = incidentStartTimes.get(incident);
             if (startTime != null) {
-                long extinguishTime = System.currentTimeMillis() - startTime;
-                double extinguishTimeSec = extinguishTime / 1000.0;
-                EventLogger.info(EventLogger.NO_ID, "[METRICS] Fire extinguish time for Zone " + incident.getZoneID() + ": " + extinguishTimeSec + " s", true);
+                long extinguishTimeMs = System.currentTimeMillis() - startTime;
+                double extinguishTimeSec = extinguishTimeMs / 1000.0;
 
-                // Accumulate totals for average calculation
-                totalExtinguishTime += extinguishTime;
+                // Store extinguish time for this zone
+                if (!zoneExtinguishTimes.containsKey(incident.getZoneID())) {
+                    zoneExtinguishTimes.put(incident.getZoneID(), extinguishTimeSec);
+                }
+
+                // Accumulate totals for avg
+                totalExtinguishTime += extinguishTimeMs;
                 incidentsCompleted++;
             }
+
 
             // notify FireIncidentSubSystem that the fire has been put out
             IncidentEvent fireOutEvent = new IncidentEvent("", incident.getZoneID(), EventType.FIRE_EXTINGUISHED, Severity.NONE, Faults.NONE);
