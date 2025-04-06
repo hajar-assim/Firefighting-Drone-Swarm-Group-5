@@ -61,7 +61,7 @@ public class DroneSwarmDashboard extends JFrame {
         legendPanel.add(Box.createVerticalStrut(12));
 
         // "Legend" title
-        JLabel legendTitle = new JLabel("Legend");
+        JLabel legendTitle = new JLabel("LEGEND");
         legendTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
         legendTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         legendPanel.add(legendTitle);

@@ -18,7 +18,7 @@ public class BaseStationPanel extends JPanel {
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 g.setFont(new Font("SansSerif", Font.BOLD, 14));
-                g.drawString("Base Drones", 10, 20);
+                g.drawString("BASE DRONES", 10, 20);
 
                 int y = 40;
                 for (int id : dronesAtBase) {
