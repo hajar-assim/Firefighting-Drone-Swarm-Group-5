@@ -10,6 +10,7 @@ import subsystems.drone.DroneSubsystem;
 import subsystems.drone.events.*;
 import subsystems.drone.states.*;
 import subsystems.fire_incident.Faults;
+import subsystems.fire_incident.FireIncidentSubsystem;
 import subsystems.fire_incident.events.IncidentEvent;
 import subsystems.fire_incident.Severity;
 import subsystems.fire_incident.events.ZoneEvent;
@@ -102,6 +103,7 @@ public class Scheduler {
 
         this.receiveSocket.getSocket().close();
         this.sendSocket.getSocket().close();
+        System.exit(1);
     }
 
     /**
@@ -224,6 +226,12 @@ public class Scheduler {
             dronesReturningToBase.clear();
 
             for (int droneID : this.dronesInfo.keySet()) {
+                // skip dispatch event for drones that already are at base
+                if (isAtBase(dronesInfo.get(droneID).getCoordinates())) {
+                    EventLogger.info(EventLogger.NO_ID, "Drone " + droneID + " is already at base.", false);
+                    dronesReturningToBase.remove(droneID);
+                    continue;
+                }
                 dronesReturningToBase.add(droneID);
                 sendToDrone(dispatchToBase, droneID);
             }

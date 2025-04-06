@@ -171,6 +171,10 @@ public class FireIncidentSubsystem {
         while (!activeFires.isEmpty()) {
             IncidentEvent event = (IncidentEvent) socket.receive();
             EventLogger.info(EventLogger.NO_ID, "Received event: " + event, false);
+            if (event == null) {
+                EventLogger.error(EventLogger.NO_ID, "Received null event.");
+                continue;
+            }
 
             if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
                 removeFire(event.getZoneID());
@@ -197,7 +201,6 @@ public class FireIncidentSubsystem {
         socket.send(noMoreIncidents, schedulerAddress, schedulerPort);
 
         socket.getSocket().close();
-
     }
 
     public static void main(String[] args) {
