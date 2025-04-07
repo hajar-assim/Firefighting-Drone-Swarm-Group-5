@@ -16,8 +16,8 @@ import static main.ui.DroneSwarmDashboard.*;
 public class GridPanel extends JPanel {
     private Point hoveredCell = null;
     public static final int CELL_SIZE = 40; // this is the # divided by the coordinates in the original csv
-    public static final int GRID_WIDTH = 25;
-    public static final int GRID_HEIGHT = 20;
+    public static final int GRID_WIDTH = 40;
+    public static final int GRID_HEIGHT = 40;
     public static final int PADDING = 10; // pixels of space around the grid
     public static final Image FIRE_IMAGE = new ImageIcon("src/main/ui/emojis/ACTIVE_FIRE.png").getImage()
             .getScaledInstance(CELL_SIZE, CELL_SIZE, Image.SCALE_SMOOTH);

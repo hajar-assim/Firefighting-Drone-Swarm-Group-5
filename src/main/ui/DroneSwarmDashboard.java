@@ -95,6 +95,11 @@ public class DroneSwarmDashboard extends JFrame {
 
         // === BASE LEGEND ===
         GridPanel gridPanel = new GridPanel();
+        JScrollPane scrollPane = new JScrollPane(
+                gridPanel,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS
+        );
         JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BorderLayout());
         rightPanel.add(showFaultedToggle, BorderLayout.NORTH);
@@ -103,7 +108,7 @@ public class DroneSwarmDashboard extends JFrame {
         setLayout(new BorderLayout());
         add(basePanel, BorderLayout.WEST);
         add(rightPanel, BorderLayout.EAST);
-        add(gridPanel, BorderLayout.CENTER);
+        add(scrollPane, BorderLayout.CENTER);
 
         pack();
         setVisible(true);
