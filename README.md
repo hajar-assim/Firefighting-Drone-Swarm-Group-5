@@ -208,6 +208,49 @@ Iteration 4 introduces **fault detection and handling** capabilities in the syst
 
 ***
 ## Iteration #5
+
+### Overview
+
+The final iteration focuses on enforcing drone capacity limits, introducing a real-time user interface, and collecting system performance metrics. The goal is to simulate a more realistic firefighting dispatcher environment, with live visuals and operational constraints like refilling and drone faults.
+
+### Key Features
+
+- **Agent Capacity Limits**  
+  Drones now monitor their water levels. If a drone runs out of firefighting agent, it must return to base for a refill before continuing operations. Zones still requiring service will wait until a refilled drone becomes available.
+
+- **Real-Time GUI Dashboard**  
+  A Swing-based dashboard was developed to visualize:
+  - Fire zones and their current status (active/extinguished)
+  - Live drone positions, movements, and operational states (idle, en route, dropping, returning, faulted)
+  - Fire severity, remaining water required, and active incidents
+  - A side legend and drone base panel for improved user context
+  - UI Button to allow manual drone creation
+
+- **Improved Task Distribution**  
+  Scheduler ensures that each fire zone receives at least one drone before any zone receives reinforcements. Further assignments prioritize severity and proximity.
+
+- **Fault Visualization and Handling**  
+  Only the first drone to reach a fire zone triggers a fault, if specified. Faults are shown on the dashboard and handled gracefully by rerouting or shutting down affected drones.
+
+- **Performance Instrumentation**  
+  The system now logs important performance metrics such as:
+  - Total time taken to extinguish all fires
+  - Total distance traveled by all drones
+  - Individual response and extinguish times per incident
+
+### Updated & New Components
+
+- **main/**
+  - `Scheduler.java`: Integrated with dashboard, added drone reassignment logic and performance tracking.
+
+- **gui/**
+  - `DroneSwarmDashboard.java`: Visualizes drones, fire zones, statuses, and legend panel.
+  - `LegendPanel.java`, `BasePanel.java`: Additional Swing components for structured display.
+
+- **subsystems/drone/**
+  - `OnRouteState.java`: Updated to simulate incremental travel and enable mid-flight decisions.
+  - `DroneInfo.java`: Now includes support for UI rendering and tracking metrics.
+
 ***
 
 ### Contributors ~ Group A4-5
