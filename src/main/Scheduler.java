@@ -706,5 +706,6 @@ public class Scheduler {
 
         Scheduler scheduler = new Scheduler(address, 7000);
         scheduler.run();
+        System.exit(0);
     }
 }
