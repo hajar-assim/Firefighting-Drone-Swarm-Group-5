@@ -78,10 +78,10 @@ class FireIncidentSubsystemTest {
         File eventFile = new File(tempDir.toFile(), "events.csv");
         Files.write(eventFile.toPath(), Arrays.asList(
                 "timestamp,zoneID,eventType,severity,fault",
-                "2023-01-01T00:00:00,0,FIRE_DETECTED,NONE,NONE",
-                "2023-01-01T00:00:01,1,FIRE_DETECTED,LOW,NOZZLE_JAMMED",
-                "2023-01-01T00:00:02,2,FIRE_DETECTED,MODERATE,DRONE_STUCK_IN_FLIGHT",
-                "2023-01-01T00:00:03,3,FIRE_DETECTED,HIGH,PACKET_LOSS"
+                "00:00:00,0,FIRE_DETECTED,NONE,NONE",
+                "00:00:01,1,FIRE_DETECTED,LOW,NOZZLE_JAMMED",
+                "00:00:02,2,FIRE_DETECTED,MODERATE,DRONE_STUCK_IN_FLIGHT",
+                "00:00:03,3,FIRE_DETECTED,HIGH,PACKET_LOSS"
         ));
 
         // ===== Initialize Subsystem =====

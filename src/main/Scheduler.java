@@ -153,7 +153,6 @@ public class Scheduler {
 
         this.receiveSocket.getSocket().close();
         this.sendSocket.getSocket().close();
-        System.exit(1);
     }
 
     /**

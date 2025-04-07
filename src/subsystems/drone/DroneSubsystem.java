@@ -3,7 +3,6 @@ package subsystems.drone;
 import logger.EventLogger;
 import main.EventSocket;
 import subsystems.Event;
-import subsystems.drone.events.DroneArrivedEvent;
 import subsystems.drone.events.DroneUpdateEvent;
 import subsystems.drone.events.DropAgentEvent;
 import subsystems.drone.states.DroneState;
