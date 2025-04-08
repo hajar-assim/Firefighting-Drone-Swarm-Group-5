@@ -1,5 +1,6 @@
 package main.ui;
 
+import logger.EventLogger;
 import subsystems.fire_incident.Severity;
 
 import javax.swing.*;
@@ -15,10 +16,12 @@ import static main.ui.DroneSwarmDashboard.*;
  */
 public class GridPanel extends JPanel {
     private Point hoveredCell = null;
-    public static final int CELL_SIZE = 40; // this is the # divided by the coordinates in the original csv
-    public static final int GRID_WIDTH = 40;
-    public static final int GRID_HEIGHT = 40;
-    public static final int PADDING = 10; // pixels of space around the grid
+    public static final int CELL_SIZE = 21; // this is the # divided by the coordinates in the original csv
+    public static final int MAX_COORD_X = 2250;
+    public static final int MAX_COORD_Y = 2250;
+    public static final int GRID_WIDTH = 55;
+    public static final int GRID_HEIGHT = 50;
+    public static final int PADDING = 15; // pixels of space around the grid
     public static final Image FIRE_IMAGE = new ImageIcon("src/main/ui/emojis/ACTIVE_FIRE.png").getImage()
             .getScaledInstance(CELL_SIZE, CELL_SIZE, Image.SCALE_SMOOTH);
 
@@ -26,7 +29,11 @@ public class GridPanel extends JPanel {
             .getScaledInstance(CELL_SIZE, CELL_SIZE, Image.SCALE_SMOOTH);
 
     public GridPanel() {
-        setPreferredSize(new Dimension(GRID_WIDTH * CELL_SIZE + 2 * PADDING, GRID_HEIGHT * CELL_SIZE + 2 * PADDING));
+        setPreferredSize(new Dimension(
+                GRID_WIDTH * CELL_SIZE + PADDING * 2,
+                GRID_HEIGHT * CELL_SIZE + PADDING * 2
+        ));
+
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
@@ -43,11 +50,27 @@ public class GridPanel extends JPanel {
         }
     }
 
+    // scale world coordinates into grid cell coordinates
+    private static final double COORD_SCALE = 2.0; // tweak this until zones land properly
+
+    public static Point toGridCoord(int worldX, int worldY) {
+        int gridX = (int) Math.floor(worldX / COORD_SCALE);
+        int gridY = (int) Math.floor(worldY / COORD_SCALE);
+
+        gridX = Math.min(gridX, GRID_WIDTH - 1);
+        gridY = Math.min(gridY, GRID_HEIGHT - 1);
+
+        EventLogger.info(EventLogger.NO_ID, "World (" + worldX + "," + worldY + ") -> Grid (" + gridX + "," + gridY + ")", false);
+        return new Point(gridX, gridY);
+    }
+
+
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // draw grid
+        // === draw grid ===
         for (int x = 0; x < GRID_WIDTH; x++) {
             for (int y = 0; y < GRID_HEIGHT; y++) {
                 int px = x * CELL_SIZE + PADDING;
@@ -64,6 +87,31 @@ public class GridPanel extends JPanel {
             }
         }
 
+        // === axis ticks  ===
+        g.setFont(new Font("SansSerif", Font.PLAIN, 8));
+        g.setColor(Color.DARK_GRAY);
+
+        // top (X-axis)
+        for (int x = 0; x < GRID_WIDTH; x++) {
+            int px = x * CELL_SIZE + PADDING;
+
+            if (x % 5 == 0) { // Show tick every 5 cells
+                g.drawLine(px, PADDING - 4, px, PADDING); // small vertical tick
+                g.drawString(String.valueOf(x), px - 4, PADDING - 7); // label above tick
+            }
+        }
+
+        // left (Y-axis)
+        for (int y = 0; y < GRID_HEIGHT; y++) {
+            int py = y * CELL_SIZE + PADDING;
+
+            if (y % 5 == 0) {
+                g.drawLine(PADDING - 4, py, PADDING, py); // small horizontal tick
+                g.drawString(String.valueOf(y), -1, py + 2); // label left of tick
+            }
+        }
+
+        // === fill zone colors ===
         for (Map.Entry<Integer, Rectangle> entry : zoneBounds.entrySet()) {
             int zoneID = entry.getKey();
             Rectangle r = entry.getValue();
@@ -87,21 +135,21 @@ public class GridPanel extends JPanel {
             g.drawRect(px, py, width, height);
         }
 
-        // add zone labels etc: Z(1)
-        g.setFont(new Font("SansSerif", Font.BOLD, 12));
+        // === add zone labels etc: Z(1) ===
+        g.setFont(new Font("SansSerif", Font.BOLD, 8));
         g.setColor(Color.BLACK);
 
         for (Map.Entry<Integer, Point> entry : zoneLabels.entrySet()) {
             int zoneID = entry.getKey();
             Point gridPos = entry.getValue(); // top-left cell of zone
 
-            int px = gridPos.x * CELL_SIZE + PADDING + 4;
+            int px = gridPos.x * CELL_SIZE + PADDING + 2;
             int py = gridPos.y * CELL_SIZE + PADDING + 14;
 
             g.drawString("Z(" + zoneID + ")", px, py);
         }
 
-        // draw fire indicator
+        // === draw fire indicator ===
         for (Map.Entry<Integer, Rectangle> entry : zoneBounds.entrySet()) {
             int zoneID = entry.getKey();
             if (zoneID == 0) continue; // skip zone 0, our base
@@ -123,7 +171,7 @@ public class GridPanel extends JPanel {
             g.drawImage(imageToDraw, px, py, CELL_SIZE, CELL_SIZE, null);
         }
 
-        // draw drones
+        // === draw drones ===
         for (Map.Entry<Integer, DroneRender> entry : droneStates.entrySet()) {
             int droneID = entry.getKey();
             DroneRender drone = entry.getValue();
@@ -132,10 +180,15 @@ public class GridPanel extends JPanel {
                 continue; // skip drawing faulted drone
             }
 
-            int px = drone.gridPos.x * CELL_SIZE + PADDING;
-            int py = drone.gridPos.y * CELL_SIZE + PADDING;
+            Point gridPos = toGridCoord(drone.worldX, drone.worldY);
 
-            g.drawImage(drone.state.image, px, py, CELL_SIZE -15, CELL_SIZE -15, null);
+            int px = gridPos.x * CELL_SIZE + PADDING;
+            int py = gridPos.y * CELL_SIZE + PADDING;
+
+            int droneSize = (int)(CELL_SIZE * 0.75); // 75% of the cell
+            int droneOffset = (CELL_SIZE - droneSize) / 2;
+
+            g.drawImage(drone.state.image, px + droneOffset, py + droneOffset, droneSize, droneSize, null);
 
             // don't want to fully cover the cell with drone color, should show up as a dot
             int size = CELL_SIZE / 5;
@@ -144,16 +197,16 @@ public class GridPanel extends JPanel {
             // draw drone ID label etc: D(1)
 
             //  exclude Z(0) since we already have a panel for base drones
-            if (entry.getValue().gridPos.x == 0 && entry.getValue().gridPos.y == 0) {
+            if (drone.worldX == 0 && drone.worldY == 0) {
                 continue;
             }
 
             g.setColor(Color.BLACK);
-            g.setFont(new Font("SansSerif", Font.ITALIC, 10));
+            g.setFont(new Font("SansSerif", Font.BOLD, 8));
 
             // draw the label underneath the drone
-            int labelX = px + offset - 13; // slight nudge to center it
-            int labelY = py + offset + size + 12; // below the square
+            int labelX = px + offset - 5; // slight nudge to center it
+            int labelY = py + offset + size + 15; // below the square
             g.drawString("D(" + droneID + ")", labelX, labelY);
         }
 

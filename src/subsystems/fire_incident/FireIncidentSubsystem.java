@@ -23,7 +23,7 @@ import java.util.HashSet;
  */
 public class FireIncidentSubsystem {
     public static Point2D BASE_COORDINATES = new Point2D.Double(0,0);
-    private static final int SLEEP_DIVIDER = 2;  // Speed up sleep time between events
+    private static final int SLEEP_DIVIDER = 80;  // Speed up sleep time between events
     private final String INPUT_FOLDER;
     private File eventFile;
     private File zoneFile;

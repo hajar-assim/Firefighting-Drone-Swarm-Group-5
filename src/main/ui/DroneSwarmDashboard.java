@@ -166,23 +166,20 @@ public class DroneSwarmDashboard extends JFrame {
         repaint();
     }
 
-    /**
-     * Marks a zone on the grid.
-     * @param zoneID
-     * @param start
-     * @param end
-     */
-    public void markZone(int zoneID, Point start, Point end) {
+    public void markZone(int zoneID, Point worldStart, Point worldEnd) {
+        Point start = GridPanel.toGridCoord(worldStart.x, worldStart.y);
+        Point end = toGridCoord(worldEnd.x, worldEnd.y);
+
         int startX = Math.min(start.x, end.x);
         int endX = Math.max(start.x, end.x);
         int startY = Math.min(start.y, end.y);
         int endY = Math.max(start.y, end.y);
 
         zoneLabels.put(zoneID, new Point(startX, startY));
-        zoneBounds.put(zoneID, new Rectangle(startX, startY, endX - startX + 1, endY - startY + 1));
+        zoneBounds.put(zoneID, new Rectangle(startX, startY, endX - startX, endY - startY));
 
-        for (int x = startX; x <= endX; x++) {
-            for (int y = startY; y <= endY; y++) {
+        for (int x = startX; x < endX; x++) {
+            for (int y = startY; y < endY; y++) {
                 zoneMap.put(new Point(x, y), CellType.ZONE);
             }
         }
@@ -193,8 +190,8 @@ public class DroneSwarmDashboard extends JFrame {
     /**
      * Draws a drone on the grid.
      */
-    public void updateDronePosition(int droneID, Point gridPos, DroneStateEnum state) {
-        droneStates.put(droneID, new DroneRender(gridPos, state));
+    public void updateDronePosition(int droneID, Point worldPos, DroneStateEnum state) {
+        droneStates.put(droneID, new DroneRender(worldPos, state));
 
         // update base station panel with list of drones at base (0,0) and IDLE
         List<Integer> atBase = droneStates.entrySet().stream()
