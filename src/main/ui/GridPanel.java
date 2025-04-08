@@ -64,7 +64,6 @@ public class GridPanel extends JPanel {
         gridX = Math.min(gridX, GRID_WIDTH - 1);
         gridY = Math.min(gridY, GRID_HEIGHT - 1);
 
-        EventLogger.info(EventLogger.NO_ID, "World (" + worldX + "," + worldY + ") -> Grid (" + gridX + "," + gridY + ")", false);
         return new Point(gridX, gridY);
     }
 

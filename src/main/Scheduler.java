@@ -28,7 +28,8 @@ import static main.ui.GridPanel.CELL_SIZE;
 
 public class Scheduler {
     private static final AtomicInteger nextDroneId = new AtomicInteger(1);
-    public static int sleepMultiplier = 250;
+    public static int sleepMultiplier = 400;
+    public static final Point2D BASE_COORDINATES = new Point2D.Double(0,0);
     private final EventSocket sendSocket;
     private final EventSocket receiveSocket;
     private final HashMap<Integer, Point2D> fireZones;
@@ -43,11 +44,10 @@ public class Scheduler {
     private boolean shutdownPending = false;
     private final Map<Integer, IncidentEvent> activeFires = new HashMap<>();
     private final Map<IncidentEvent, Long> incidentStartTimes = new HashMap<>();
-    private long totalExtinguishTime = 0;
+    private long startExtinguishTime = 0;
     private int incidentsCompleted = 0;
     private final Map<Integer, Double> zoneResponseTimes = new HashMap<>();
     private final Map<Integer, Double> zoneExtinguishTimes = new HashMap<>();
-
 
     /**
      * Constructor initializes event managers and HashMaps.
@@ -75,7 +75,7 @@ public class Scheduler {
      * It assigns tasks, handles events, and manages drone dispatches.
      */
     public void run() {
-        while (running) {
+        while (true) {
             try {
 
                 // assign all IDLE drones to any active fires
@@ -87,9 +87,6 @@ public class Scheduler {
                 Event message = receiveSocket.receive();
 
                 switch (message) {
-                    case null -> {
-                        continue;
-                    }
 
                     // handle event based on its type
                     case ZoneEvent zoneEvent -> storeZoneData(zoneEvent);
@@ -98,8 +95,12 @@ public class Scheduler {
                     case DropAgentEvent dropEvent -> handleDropAgent(dropEvent);
                     case DroneUpdateEvent updateEvent -> handleDroneUpdate(updateEvent);
                     case DroneReassignRequestEvent reassignEvent -> handleReassignDrone(reassignEvent);
-                    default -> {
+                    case null, default -> {
                     }
+                }
+
+                if (! running){
+                    break;
                 }
 
             } catch (Exception e) {
@@ -108,53 +109,12 @@ public class Scheduler {
             }
         }
 
+        this.displayMetricsReport();
+        this.close();
 
-        EventLogger.info(EventLogger.NO_ID, "\n========== DISTANCES FROM BASE TO ZONES ==========", true);
-        for (Map.Entry<Integer, Point2D> entry : fireZones.entrySet()) {
-            int zoneID = entry.getKey();
-            if (zoneID == 0) continue;
-            int distance = (int) Math.round(FireIncidentSubsystem.BASE_COORDINATES.distance(entry.getValue()));
-            EventLogger.info(EventLogger.NO_ID, "Distance from base to Zone " + zoneID + ": " + distance + " meters", true);
+        while (true){
+            //stop gui from shutting down
         }
-
-        // Print zone extinguish times at the end of simulation
-        EventLogger.info(EventLogger.NO_ID, "\n========== ZONE EXTINGUISH TIMES ==========", true);
-        for (Map.Entry<Integer, Double> entry : zoneExtinguishTimes.entrySet()) {
-            EventLogger.info(EventLogger.NO_ID, "Fire extinguish time for Zone " + entry.getKey() + ": " + entry.getValue() + " s", true);
-        }
-
-        // Log overall performance metrics
-        EventLogger.info(EventLogger.NO_ID, "\n========== PERFORMANCE METRICS ==========", true);
-        double totalExtinguishTimeSec = totalExtinguishTime/1000.0;
-        EventLogger.info(EventLogger.NO_ID, "[METRICS] Total Extinguish Time: " + totalExtinguishTimeSec + " s", true);
-
-        if (incidentsCompleted > 0) {
-            long averageExtinguishTime = totalExtinguishTime / incidentsCompleted;
-            double averageExtinguishTimeSec = averageExtinguishTime/1000.0;
-            EventLogger.info(EventLogger.NO_ID, "[METRICS] Average Extinguish Time: " + averageExtinguishTimeSec + " s", true);
-        }
-
-        // Calc total idle time for each drone
-        for (DroneInfo drone : dronesInfo.values()) {
-
-            // Finalize drones idle time
-            if (drone.getState() instanceof IdleState && drone.getIdleStartTime() != 0) {
-                long idleDuration = System.currentTimeMillis() - drone.getIdleStartTime();
-                drone.setTotalIdleTime(drone.getTotalIdleTime() + idleDuration);
-                drone.setIdleStartTime(0);
-            }
-            double totalIdleTimeSec = drone.getTotalIdleTime()/1000.0;
-            EventLogger.info(EventLogger.NO_ID, "Drone " + drone.getDroneID() + " total idle time: " + totalIdleTimeSec + " s", true);
-        }
-
-        // Print zone response times at the end of simulation
-        EventLogger.info(EventLogger.NO_ID, "\n========== ZONE RESPONSE TIMES ==========", true);
-        for (Map.Entry<Integer, Double> entry : zoneResponseTimes.entrySet()) {
-            EventLogger.info(EventLogger.NO_ID, "Zone " + entry.getKey() + " response time: " + entry.getValue() + " s", true);
-        }
-
-        this.receiveSocket.getSocket().close();
-        this.sendSocket.getSocket().close();
     }
 
     /**
@@ -267,9 +227,12 @@ public class Scheduler {
      */
     public void handleIncidentEvent(IncidentEvent event) {
 
+        if (this.startExtinguishTime == 0){
+            this.startExtinguishTime = System.currentTimeMillis();
+        }
         if (event.getEventType() == EventType.EVENTS_DONE) {
             EventLogger.info(EventLogger.NO_ID, "Received EVENTS_DONE. Dispatching all drones to base.", false);
-            DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE);
+            DroneDispatchEvent dispatchToBase = new DroneDispatchEvent(0, BASE_COORDINATES, Faults.NONE);
 
             shutdownPending = true;
             dronesReturningToBase.clear();
@@ -303,8 +266,6 @@ public class Scheduler {
         incidentStartTimes.put(event, System.currentTimeMillis());
         EventLogger.info(EventLogger.NO_ID,"New fire incident at Zone " + event.getZoneID() + ". Requires " + event.getWaterFoamAmount() + "L of water.", true);
 
-        assignAvailableDrones();
-
         activeFires.put(event.getZoneID(), event);
         dashboard.updateZoneWater(event.getZoneID(), event.getWaterFoamAmount());
         dashboard.setZoneFireStatus(event.getZoneID(), DroneSwarmDashboard.FireStatus.ACTIVE);
@@ -321,7 +282,7 @@ public class Scheduler {
      */
     private boolean hasEnoughBattery(DroneInfo droneInfo, Point2D targetCoords){
         double distanceToTarget = droneInfo.getCoordinates().distance(targetCoords);
-        double distanceToBase = targetCoords.distance(new Point2D.Double(0,0));
+        double distanceToBase = targetCoords.distance(BASE_COORDINATES);
         double travelTime = (((distanceToTarget + distanceToBase) - 46.875) / 15 + 6.25);
 
         return (droneInfo.getFlightTime() - travelTime > DroneSubsystem.DRONE_BATTERY_TIME);
@@ -337,7 +298,7 @@ public class Scheduler {
         int droneID = event.getDroneID();
         if (event.getZoneID() == 0) {
             EventLogger.info(EventLogger.NO_ID, "Drone " + droneID + " has returned to base.", false);
-            dashboard.updateDronePosition(droneID, new Point2D.Double(0.0, 0.0), DroneStateEnum.IDLE);
+            dashboard.updateDronePosition(droneID, BASE_COORDINATES, null, DroneStateEnum.IDLE);
         } else {
             cancelWatchdog(droneID);
             IncidentEvent incident = droneAssignments.get(droneID);
@@ -412,7 +373,6 @@ public class Scheduler {
                 }
 
                 // Accumulate totals for avg
-                totalExtinguishTime += extinguishTimeMs;
                 incidentsCompleted++;
             }
 
@@ -479,13 +439,23 @@ public class Scheduler {
                     case DRONE_STUCK_IN_FLIGHT -> handleTransientDroneFailure(droneID, true);
                 }
             }
+
+            if (shutdownPending && drone.getState() instanceof IdleState){
+                dronesReturningToBase.remove(droneID);
+                checkShutdownCondition();
+            }
         }
 
         // update drone on dashboard
         DroneStateEnum guiState = DroneStateEnum.fromDroneStateObject(drone.getState());
 
         if (guiState != null) {
-            dashboard.updateDronePosition(drone.getDroneID(), drone.getCoordinates(), guiState);
+            if (drone.getState() instanceof OnRouteState){
+                Point2D targCoordinates = droneAssignments.containsKey(droneID) ? fireZones.get(droneAssignments.get(droneID).getZoneID()) : BASE_COORDINATES;
+                dashboard.updateDronePosition(drone.getDroneID(), drone.getCoordinates(), targCoordinates, guiState);
+            }else{
+                dashboard.updateDronePosition(drone.getDroneID(), drone.getCoordinates(), null, guiState);
+            }
         }
     }
 
@@ -533,7 +503,7 @@ public class Scheduler {
         int zoneID = incident.getZoneID();
         activeFires.get(zoneID).markFaultHandled();
 
-        DroneDispatchEvent shutDownEvent = new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NOZZLE_JAMMED);
+        DroneDispatchEvent shutDownEvent = new DroneDispatchEvent(0, BASE_COORDINATES, Faults.NOZZLE_JAMMED);
         sendToDrone(shutDownEvent, droneID);
     }
 
@@ -552,7 +522,7 @@ public class Scheduler {
         incidentEvent.markFaultHandled();
 
         if (dispatchToBase){
-            DroneDispatchEvent returnToBase = new DroneDispatchEvent(0, new Point2D.Double(0,0), Faults.NONE);
+            DroneDispatchEvent returnToBase = new DroneDispatchEvent(0, BASE_COORDINATES, Faults.NONE);
             sendToDrone(returnToBase, droneID);
         }
     }
@@ -634,8 +604,7 @@ public class Scheduler {
             assignDroneToIncident(nextZone.get(), drone);
         } else {
             EventLogger.info(droneID, "Drone incapable of servicing another zone. Returning to base for refill.", false);
-            Point2D base = new Point2D.Double(0, 0);
-            DroneDispatchEvent returnToBase = new DroneDispatchEvent(0, base, Faults.NONE);
+            DroneDispatchEvent returnToBase = new DroneDispatchEvent(0, BASE_COORDINATES, Faults.NONE);
             sendToDrone(returnToBase, droneID);
         }
     }
@@ -684,6 +653,54 @@ public class Scheduler {
         // track the assignment
         incident.markFaultHandled();
         droneAssignments.put(droneID, incident);
+    }
+
+    private void displayMetricsReport(){
+        long endExtinguishTime = System.currentTimeMillis();
+
+        EventLogger.info(EventLogger.NO_ID, "\n========== DISTANCES FROM BASE TO ZONES ==========", true);
+        for (Map.Entry<Integer, Point2D> entry : fireZones.entrySet()) {
+            int zoneID = entry.getKey();
+            if (zoneID == 0) continue;
+            int distance = (int) Math.round(FireIncidentSubsystem.BASE_COORDINATES.distance(entry.getValue()));
+            EventLogger.info(EventLogger.NO_ID, "Distance from base to Zone " + zoneID + ": " + distance + " meters", true);
+        }
+
+        // Print zone extinguish times at the end of simulation
+        EventLogger.info(EventLogger.NO_ID, "\n========== ZONE EXTINGUISH TIMES ==========", true);
+        for (Map.Entry<Integer, Double> entry : zoneExtinguishTimes.entrySet()) {
+            EventLogger.info(EventLogger.NO_ID, "Fire extinguish time for Zone " + entry.getKey() + ": " + entry.getValue() + " s", true);
+        }
+
+        // Log overall performance metrics
+        EventLogger.info(EventLogger.NO_ID, "\n========== PERFORMANCE METRICS ==========", true);
+        double totalExtinguishTimeSec = (endExtinguishTime - startExtinguishTime) / 1000.0;
+        EventLogger.info(EventLogger.NO_ID, "[METRICS] Total Extinguish Time: " + totalExtinguishTimeSec + " s", true);
+
+        if (incidentsCompleted > 0) {
+            long averageExtinguishTime = (endExtinguishTime - startExtinguishTime) / incidentsCompleted;
+            double averageExtinguishTimeSec = averageExtinguishTime/1000.0;
+            EventLogger.info(EventLogger.NO_ID, "[METRICS] Average Extinguish Time: " + averageExtinguishTimeSec + " s", true);
+        }
+
+        // Calc total idle time for each drone
+        for (DroneInfo drone : dronesInfo.values()) {
+
+            // Finalize drones idle time
+            if (drone.getState() instanceof IdleState && drone.getIdleStartTime() != 0) {
+                long idleDuration = System.currentTimeMillis() - drone.getIdleStartTime();
+                drone.setTotalIdleTime(drone.getTotalIdleTime() + idleDuration);
+                drone.setIdleStartTime(0);
+            }
+            double totalIdleTimeSec = drone.getTotalIdleTime()/1000.0;
+            EventLogger.info(EventLogger.NO_ID, "Drone " + drone.getDroneID() + " total idle time: " + totalIdleTimeSec + " s", true);
+        }
+
+        // Print zone response times at the end of simulation
+        EventLogger.info(EventLogger.NO_ID, "\n========== ZONE RESPONSE TIMES ==========", true);
+        for (Map.Entry<Integer, Double> entry : zoneResponseTimes.entrySet()) {
+            EventLogger.info(EventLogger.NO_ID, "Zone " + entry.getKey() + " response time: " + entry.getValue() + " s", true);
+        }
     }
 
     /**

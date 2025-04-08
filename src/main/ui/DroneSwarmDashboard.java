@@ -1,6 +1,13 @@
 package main.ui;
 
+import logger.EventLogger;
+import main.Scheduler;
+import subsystems.drone.DroneSubsystem;
+import subsystems.drone.events.DroneUpdateEvent;
+import subsystems.drone.states.FaultedState;
+import subsystems.fire_incident.Faults;
 import subsystems.fire_incident.Severity;
+import subsystems.fire_incident.events.IncidentEvent;
 
 import javax.swing.*;
 import java.awt.*;
@@ -26,6 +33,8 @@ public class DroneSwarmDashboard extends JFrame {
     public static final Map<Integer, FireStatus> zoneFireStatus = new HashMap<>();
     public static final Map<Integer, Integer> zoneRemainingWater = new HashMap<>();
     public static final Map<Integer, Severity> zoneSeverities = new HashMap<>();
+
+    public static final Map<Integer, Thread> droneFlightThreads = new HashMap<>();
 
 
     // represents fire status
@@ -191,7 +200,13 @@ public class DroneSwarmDashboard extends JFrame {
     /**
      * Draws a drone on the grid.
      */
-    public void updateDronePosition(int droneID, Point2D worldPos, DroneStateEnum state) {
+    public void updateDronePosition(int droneID, Point2D worldPos, Point2D targPos, DroneStateEnum state) {
+
+        if (state == DroneStateEnum.OUTBOUND && targPos != null){
+            startDroneFlightPath(droneID, worldPos, targPos);
+        }else{
+            cancelDroneFlightThread(droneID);
+        }
         droneStates.put(droneID, new DroneRender(worldPos, state));
 
         // update base station panel with list of drones at base (0,0) and IDLE
@@ -203,6 +218,39 @@ public class DroneSwarmDashboard extends JFrame {
         basePanel.setDronesAtBase(atBase);
 
         repaint();
+    }
+
+    public void startDroneFlightPath(int droneID, Point2D startCoords, Point2D targetCoords) {
+        Thread flightThread = new Thread(() -> {
+            try {
+                int steps = 8;
+                long stepDuration = (long) ((DroneSubsystem.timeToZone(startCoords, targetCoords) * Scheduler.sleepMultiplier) / steps);
+
+                for (int i = 1; i <= steps; i++) {
+                    double t = i / (double) steps;
+                    double x = startCoords.getX() + (targetCoords.getX() - startCoords.getX()) * t;
+                    double y = startCoords.getY() + (targetCoords.getY() - startCoords.getY()) * t;
+
+                    Thread.sleep(stepDuration);
+
+                    droneStates.put(droneID, new DroneRender(new Point2D.Double(x,y), DroneStateEnum.OUTBOUND));
+                    repaint();
+                }
+            } catch (InterruptedException ignored) {
+            } finally {
+                droneFlightThreads.remove(droneID); // Cleanup
+            }
+        });
+
+        droneFlightThreads.put(droneID, flightThread);
+        flightThread.start();
+    }
+
+    public void cancelDroneFlightThread(int droneID) {
+        Thread flightThread = droneFlightThreads.get(droneID);
+        if (flightThread != null && flightThread.isAlive()) {
+            flightThread.interrupt(); // Cancel timer
+        }
     }
 
     /**
