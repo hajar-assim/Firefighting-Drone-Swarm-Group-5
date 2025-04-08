@@ -17,6 +17,7 @@ import static main.ui.DroneSwarmDashboard.*;
 public class GridPanel extends JPanel {
     private Point hoveredCell = null;
     public static final int CELL_SIZE = 21; // this is the # divided by the coordinates in the original csv
+    private static final double COORD_SCALE = 2.0; // tweak this until zones land properly
     public static final int MAX_COORD_X = 2250;
     public static final int MAX_COORD_Y = 2250;
     public static final int GRID_WIDTH = 55;
@@ -50,12 +51,15 @@ public class GridPanel extends JPanel {
         }
     }
 
-    // scale world coordinates into grid cell coordinates
-    private static final double COORD_SCALE = 2.0; // tweak this until zones land properly
-
-    public static Point toGridCoord(int worldX, int worldY) {
-        int gridX = (int) Math.floor(worldX / COORD_SCALE);
-        int gridY = (int) Math.floor(worldY / COORD_SCALE);
+    /**
+     * Converts world coordinates to grid coordinates.
+     * @param worldX
+     * @param worldY
+     * @return
+     */
+    public static Point toGridCoord(double worldX, double worldY) {
+        int gridX = (int) Math.floor(worldX / (MAX_COORD_X / (double) GRID_WIDTH));
+        int gridY = (int) Math.floor(worldY / (MAX_COORD_Y / (double) GRID_HEIGHT));
 
         gridX = Math.min(gridX, GRID_WIDTH - 1);
         gridY = Math.min(gridY, GRID_HEIGHT - 1);
@@ -63,6 +67,7 @@ public class GridPanel extends JPanel {
         EventLogger.info(EventLogger.NO_ID, "World (" + worldX + "," + worldY + ") -> Grid (" + gridX + "," + gridY + ")", false);
         return new Point(gridX, gridY);
     }
+
 
 
 

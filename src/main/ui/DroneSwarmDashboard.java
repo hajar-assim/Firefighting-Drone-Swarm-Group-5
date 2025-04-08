@@ -4,6 +4,7 @@ import subsystems.fire_incident.Severity;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -166,9 +167,9 @@ public class DroneSwarmDashboard extends JFrame {
         repaint();
     }
 
-    public void markZone(int zoneID, Point worldStart, Point worldEnd) {
-        Point start = GridPanel.toGridCoord(worldStart.x, worldStart.y);
-        Point end = toGridCoord(worldEnd.x, worldEnd.y);
+    public void markZone(int zoneID, Point2D worldStart, Point2D worldEnd) {
+        Point start = toGridCoord(worldStart.getX(), worldStart.getY());
+        Point end = toGridCoord(worldEnd.getX(), worldEnd.getY());
 
         int startX = Math.min(start.x, end.x);
         int endX = Math.max(start.x, end.x);
@@ -190,7 +191,7 @@ public class DroneSwarmDashboard extends JFrame {
     /**
      * Draws a drone on the grid.
      */
-    public void updateDronePosition(int droneID, Point worldPos, DroneStateEnum state) {
+    public void updateDronePosition(int droneID, Point2D worldPos, DroneStateEnum state) {
         droneStates.put(droneID, new DroneRender(worldPos, state));
 
         // update base station panel with list of drones at base (0,0) and IDLE
@@ -206,7 +207,7 @@ public class DroneSwarmDashboard extends JFrame {
 
     /**
      * Returns the preferred size of the dashboard.
-     * @return
+     * @return Dimension
      */
     @Override
     public Dimension getPreferredSize() {

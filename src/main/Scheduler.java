@@ -249,9 +249,7 @@ public class Scheduler {
         fireZones.put(event.getZoneID(), event.getCenter());
 
         // update the dashboard with the new zone data
-        Point start = convertToGrid(event.getStart());
-        Point end = convertToGrid(event.getEnd());
-        dashboard.markZone(event.getZoneID(), start, end);
+        dashboard.markZone(event.getZoneID(), event.getStart(), event.getEnd());
 
         EventLogger.info(EventLogger.NO_ID, String.format(
                 "Stored fire zone {ZoneID: %d | Center: (%.1f, %.1f)}",
@@ -339,7 +337,7 @@ public class Scheduler {
         int droneID = event.getDroneID();
         if (event.getZoneID() == 0) {
             EventLogger.info(EventLogger.NO_ID, "Drone " + droneID + " has returned to base.", false);
-            dashboard.updateDronePosition(droneID, new Point(0, 0), DroneStateEnum.IDLE);
+            dashboard.updateDronePosition(droneID, new Point2D.Double(0.0, 0.0), DroneStateEnum.IDLE);
         } else {
             cancelWatchdog(droneID);
             IncidentEvent incident = droneAssignments.get(droneID);
@@ -487,8 +485,7 @@ public class Scheduler {
         DroneStateEnum guiState = DroneStateEnum.fromDroneStateObject(drone.getState());
 
         if (guiState != null) {
-            Point grid = convertToGrid(drone.getCoordinates());
-            dashboard.updateDronePosition(drone.getDroneID(), grid, guiState);
+            dashboard.updateDronePosition(drone.getDroneID(), drone.getCoordinates(), guiState);
         }
     }
 
@@ -598,11 +595,11 @@ public class Scheduler {
      * @param realWorldPoint The real-world coordinates to convert.
      * @return The grid coordinates as a Point object.
      */
-    private Point convertToGrid(Point2D realWorldPoint) {
-        int gridX = (int) Math.round((realWorldPoint.getX() / CELL_SIZE));
-        int gridY = (int) Math.round((realWorldPoint.getY() / CELL_SIZE));
-        return new Point(gridX, gridY);
-    }
+//    private Point convertToGrid(Point2D realWorldPoint) {
+//        int gridX = (int) Math.round((realWorldPoint.getX() / CELL_SIZE));
+//        int gridY = (int) Math.round((realWorldPoint.getY() / CELL_SIZE));
+//        return new Point(gridX, gridY);
+//    }
 
     /**
      * Checks if the drone is at the base (0, 0).
