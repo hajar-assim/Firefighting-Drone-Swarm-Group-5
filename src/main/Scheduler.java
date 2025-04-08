@@ -28,7 +28,7 @@ import static main.ui.GridPanel.CELL_SIZE;
 
 public class Scheduler {
     private static final AtomicInteger nextDroneId = new AtomicInteger(1);
-    public static int sleepMultiplier = 1000;
+    public static int sleepMultiplier = 250;
     private final EventSocket sendSocket;
     private final EventSocket receiveSocket;
     private final HashMap<Integer, Point2D> fireZones;
@@ -79,7 +79,9 @@ public class Scheduler {
             try {
 
                 // assign all IDLE drones to any active fires
-                assignAvailableDrones();
+                if (! activeFires.isEmpty()){
+                    assignAvailableDrones();
+                }
 
                 // Retrieve an event from the queue
                 Event message = receiveSocket.receive();

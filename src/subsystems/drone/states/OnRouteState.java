@@ -17,7 +17,8 @@ import java.awt.geom.Point2D;
 
 public class OnRouteState implements DroneState {
     private DroneDispatchEvent dispatchEvent;
-    private final int TRAVEL_CHECK_FREQ = 3;
+    private final int TRAVEL_CHECK_FREQ = 1;
+    private final boolean TRAVEL_CHECK = false;
 
     /**
      * Handles events while the drone is in the OnRouteState.
@@ -85,7 +86,7 @@ public class OnRouteState implements DroneState {
                 + " | Estimated time: " + String.format("%.2f seconds", flightTime)), false);
 
         // simulate animated flight
-        int steps = 20;
+        int steps = 4;
         int triggerInterval = steps / TRAVEL_CHECK_FREQ;
         long stepDuration = (long) ((flightTime * Scheduler.sleepMultiplier) / steps);
 
@@ -96,7 +97,7 @@ public class OnRouteState implements DroneState {
 
             drone.setCoordinates(new Point2D.Double(x, y));
 
-            if (i % triggerInterval == 0 && !returningToBase && drone.getWaterLevel() > 0) {
+            if (TRAVEL_CHECK && i % triggerInterval == 0 && !returningToBase && drone.getWaterLevel() > 0) {
                 // check if fire still needs service
                 EventLogger.info(drone.getDroneID(), "Checking if fire at Zone " + drone.getZoneID() + " still needs water mid-flight...", false);
                 DroneReassignRequestEvent reassignRequest = new DroneReassignRequestEvent(drone.getDroneID());
