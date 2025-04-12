@@ -83,7 +83,7 @@ public class DroppingAgentState implements DroneState {
 
         int volume = event.getVolume();
         try {
-            Thread.sleep((long) volume * Scheduler.sleepMultiplier);
+            Thread.sleep((long) volume * (Scheduler.sleepMultiplier / 2));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

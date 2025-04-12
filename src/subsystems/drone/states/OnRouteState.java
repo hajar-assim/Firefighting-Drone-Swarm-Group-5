@@ -17,7 +17,8 @@ import java.awt.geom.Point2D;
 
 public class OnRouteState implements DroneState {
     private DroneDispatchEvent dispatchEvent;
-    private final int TRAVEL_CHECK_FREQ = 3;
+    private final int TRAVEL_CHECK_FREQ = 1;
+    private final boolean TRAVEL_CHECK = false;
 
     /**
      * Handles events while the drone is in the OnRouteState.
@@ -85,53 +86,25 @@ public class OnRouteState implements DroneState {
                 + " | Estimated time: " + String.format("%.2f seconds", flightTime)), false);
 
         // simulate animated flight
-        int steps = 20;
-        int triggerInterval = steps / TRAVEL_CHECK_FREQ;
-        long stepDuration = (long) ((flightTime * Scheduler.sleepMultiplier) / steps);
+        long sleepDuration = (long) (flightTime * Scheduler.sleepMultiplier) / 2;
 
-        for (int i = 1; i <= steps; i++) {
-            double t = i / (double) steps;
-            double x = start.getX() + (targetCoords.getX() - start.getX()) * t;
-            double y = start.getY() + (targetCoords.getY() - start.getY()) * t;
-
-            drone.setCoordinates(new Point2D.Double(x, y));
-
-            if (i % triggerInterval == 0 && !returningToBase && drone.getWaterLevel() > 0) {
-                // check if fire still needs service
-                EventLogger.info(drone.getDroneID(), "Checking if fire at Zone " + drone.getZoneID() + " still needs water mid-flight...", false);
-                DroneReassignRequestEvent reassignRequest = new DroneReassignRequestEvent(drone.getDroneID());
-                drone.getSocket().send(reassignRequest, drone.getSchedulerAddress(), drone.getSchedulerPort());
-
-                //recieve from socket, if fire is inactive then set state to idle and break/return from travel
-                Event event = drone.getSocket().receive();
-                if (event instanceof DroneDispatchEvent droneDispatch && droneDispatch.getZoneID() != drone.getZoneID()) {
-                    EventLogger.info(drone.getDroneID(), "Fire at Zone " + drone.getZoneID() + " is inactive.", false);
-                    String zone = droneDispatch.getZoneID() != 0 ? "new Zone: " + droneDispatch.getZoneID() : "Base";
-                    EventLogger.info(drone.getDroneID(), "Redirecting to " + zone, false);
-                    dispatch(drone, (DroneDispatchEvent) event);
-                    return;
-                } else {
-                    EventLogger.info(drone.getDroneID(), "Fire at Zone " + drone.getZoneID() + " is still active. Continuing flight.", false);
-                }
-            }
-
-            // notify scheduler (GUI)
-            DroneUpdateEvent updateEvent = new DroneUpdateEvent(drone.getDroneInfo());
-            drone.getSocket().send(updateEvent, drone.getSchedulerAddress(), drone.getSchedulerPort());
-
-            try {
-                Thread.sleep(stepDuration);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
+        try {
+            Thread.sleep(sleepDuration);
             // Inject simulated fault mid-flight
-            if (dispatchEvent.getFault() == Faults.DRONE_STUCK_IN_FLIGHT && i == steps / 2) {
+            if (dispatchEvent.getFault() == Faults.DRONE_STUCK_IN_FLIGHT) {
+                double midX = (start.getX() + start.getX()) / 2;
+                double midY = (targetCoords.getY() + targetCoords.getY()) / 2;
+                drone.setCoordinates(new Point2D.Double(midX, midY));
+
                 EventLogger.warn(drone.getDroneID(), "Simulating " + dispatchEvent.getFault() + " fault mid-flight. Not sending arrival event.");
                 drone.setState(new FaultedState(dispatchEvent.getFault()));
                 drone.setZoneID(0);
                 return;
+            }else{
+                Thread.sleep(sleepDuration);
             }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
         // Handle nozzle jam before arrival

@@ -1,5 +1,6 @@
 package main;
 
+import logger.EventLogger;
 import subsystems.*;
 import java.net.*;
 import java.io.*;
@@ -60,7 +61,7 @@ EventSocket {
             DatagramPacket packet = new DatagramPacket(msg, msg.length, address, port);
             socket.send(packet);
         } catch (IOException e) {
-            e.printStackTrace();
+            EventLogger.error(EventLogger.NO_ID, "[EventSocket] Error sending event: " + e.getMessage());
         }
     }
 
@@ -90,7 +91,7 @@ EventSocket {
             System.err.println("[EventSocket] EOFException during receive: " + e.getMessage());
             return null;
         } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+            System.err.println("[EventSocket] IOException during receive: " + e.getMessage());
             return null;
         }
     }

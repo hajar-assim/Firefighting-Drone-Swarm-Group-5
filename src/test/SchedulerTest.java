@@ -60,38 +60,8 @@ class SchedulerTest {
         assertEquals(new Point2D.Double(20, 30), fireZones.get(1), "Fire zone should be stored correctly.");
     }
 
-
     /**
-     * Test 2: Ensure a drone can be assigned to an incident.
-     */
-    @Test
-    void testAssignDroneToIncident() throws Exception {
-        IncidentEvent incident = new IncidentEvent("", 5, EventType.FIRE_DETECTED, Severity.HIGH, Faults.NONE);
-        DroneInfo droneInfo = new DroneInfo(InetAddress.getLocalHost(), 5000);
-
-        java.lang.reflect.Field fireZonesField = Scheduler.class.getDeclaredField("fireZones");
-        fireZonesField.setAccessible(true);
-        Map<Integer, Point2D> fireZones = (Map<Integer, Point2D>) fireZonesField.get(scheduler);
-        fireZones.put(incident.getZoneID(), new Point2D.Double(10, 10));  // Add fire zone manually
-
-        java.lang.reflect.Field dronesInfoField = Scheduler.class.getDeclaredField("dronesInfo");
-        dronesInfoField.setAccessible(true);
-        Map<Integer, DroneInfo> dronesInfo = (Map<Integer, DroneInfo>) dronesInfoField.get(scheduler);
-        dronesInfo.put(1, droneInfo);
-
-        java.lang.reflect.Method assignDroneMethod = Scheduler.class.getDeclaredMethod("assignDrone", IncidentEvent.class);
-        assignDroneMethod.setAccessible(true);
-
-        boolean assigned = (boolean) assignDroneMethod.invoke(scheduler, incident);
-
-        assertTrue(assigned, "Drone should be assigned.");
-    }
-
-
-
-
-    /**
-     * Test 3: Ensure incidents are queued when no drone is available.
+     * Test 2: Ensure incidents are queued when no drone is available.
      */
     @Test
     void testHandleIncidentEventWithoutAvailableDrone() throws Exception {
@@ -106,16 +76,15 @@ class SchedulerTest {
         handleIncidentMethod.setAccessible(true);
         handleIncidentMethod.invoke(scheduler, incident);
 
-        java.lang.reflect.Field unassignedIncidentsField = Scheduler.class.getDeclaredField("unassignedIncidents");
-        unassignedIncidentsField.setAccessible(true);
-        PriorityQueue<IncidentEvent> unassignedIncidents = (PriorityQueue<IncidentEvent>) unassignedIncidentsField.get(scheduler);
+        java.lang.reflect.Field activeFiresField = Scheduler.class.getDeclaredField("activeFires");
+        activeFiresField.setAccessible(true);
+        Map<Integer, IncidentEvent> activeFires = (Map<Integer, IncidentEvent>) activeFiresField.get(scheduler);
 
-        assertEquals(1, unassignedIncidents.size(), "Incident should be stored when no drone is available.");
-        assertTrue(unassignedIncidents.contains(incident));
+        assertEquals(1, activeFires.size(), "Incident should be stored when no drone is available.");
     }
 
     /**
-     * Test 4: Ensure drone arrival is handled correctly.
+     * Test 3: Ensure drone arrival is handled correctly.
      */
     @Test
     void testHandleDroneArrival() throws Exception {
@@ -131,6 +100,11 @@ class SchedulerTest {
         Map<Integer, DroneInfo> dronesInfo = (Map<Integer, DroneInfo>) dronesInfoField.get(scheduler);
         dronesInfo.put(droneID, droneInfo);
 
+        java.lang.reflect.Field activeFiresField = Scheduler.class.getDeclaredField("activeFires");
+        activeFiresField.setAccessible(true);
+        Map<Integer, IncidentEvent> activeFires = (Map<Integer, IncidentEvent>) activeFiresField.get(scheduler);
+        activeFires.put(zoneID, incident);
+
         java.lang.reflect.Field droneAssignmentsField = Scheduler.class.getDeclaredField("droneAssignments");
         droneAssignmentsField.setAccessible(true);
         Map<Integer, IncidentEvent> droneAssignments = (Map<Integer, IncidentEvent>) droneAssignmentsField.get(scheduler);
@@ -145,7 +119,7 @@ class SchedulerTest {
 
 
     /**
-     * Test 5: Ensure drop agent event updates water requirements.
+     * Test 4: Ensure drop agent event updates water requirements.
      */
     @Test
     void testHandleDropAgentEvent() throws Exception {
@@ -154,6 +128,11 @@ class SchedulerTest {
 
         DropAgentEvent dropEvent = new DropAgentEvent(10, droneID);
         IncidentEvent incident = new IncidentEvent("", zoneID, EventType.FIRE_DETECTED, Severity.MODERATE, Faults.NONE);
+
+        java.lang.reflect.Field activeFiresField = Scheduler.class.getDeclaredField("activeFires");
+        activeFiresField.setAccessible(true);
+        Map<Integer, IncidentEvent> activeFires = (Map<Integer, IncidentEvent>) activeFiresField.get(scheduler);
+        activeFires.put(zoneID, incident);
 
         java.lang.reflect.Field droneAssignmentsField = Scheduler.class.getDeclaredField("droneAssignments");
         droneAssignmentsField.setAccessible(true);

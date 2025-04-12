@@ -14,7 +14,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 /**
  * The FireIncidentSubsystem class is responsible for processing fire incident data.
@@ -23,14 +25,14 @@ import java.util.HashSet;
  */
 public class FireIncidentSubsystem {
     public static Point2D BASE_COORDINATES = new Point2D.Double(0,0);
-    private static final int SLEEP_DIVIDER = 2;  // Speed up sleep time between events
+    private static final int SLEEP_DIVIDER = 200;  // Speed up sleep time between events
     private final String INPUT_FOLDER;
     private File eventFile;
     private File zoneFile;
     private EventSocket socket;
     private InetAddress schedulerAddress;
     private int schedulerPort;
-    private HashSet<Integer> activeFires = new HashSet<>();
+    private List<Integer> activeFires = new ArrayList<>();
     private LocalTime startTime;
 
     /**
@@ -110,6 +112,15 @@ public class FireIncidentSubsystem {
                     Thread.sleep(durationUntilNextEvent.toMillis() / SLEEP_DIVIDER);
                 }
 
+                while(activeFires.contains(zoneId)){
+                    IncidentEvent event = (IncidentEvent) socket.receive();
+                    if (event.getEventType() == EventType.FIRE_EXTINGUISHED) {
+                        removeFire(event.getZoneID());
+                    } else {
+                        EventLogger.info(EventLogger.NO_ID, "Scheduler Response: {" + event + "}", false);
+                    }
+                }
+
                 // Create IncidentEvent with injected fault
                 IncidentEvent incident = new IncidentEvent(timestamp, zoneId, eventType, severity, fault);
                 EventLogger.info(EventLogger.NO_ID, "New incident detected: {" + incident + "}", true);
@@ -156,7 +167,7 @@ public class FireIncidentSubsystem {
      */
     private void removeFire(int zoneID) {
         if (activeFires.contains(zoneID)) {
-            activeFires.remove(zoneID);
+            activeFires.remove(Integer.valueOf(zoneID));
             EventLogger.info(EventLogger.NO_ID, "Fire extinguished at Zone " + zoneID, true);
         }
     }
